@@ -1,6 +1,6 @@
-/**
+ï»¿/**
  * @file rt_utils.hpp
- * @brief ÊµÊ±Ïß³Ì¹¤¾ßº¯Êı
+ * @brief å®æ—¶çº¿ç¨‹å·¥å…·å‡½æ•°
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -24,9 +24,9 @@
 namespace odroid {
 
 /**
- * @brief ÉèÖÃÏß³Ìµ÷¶È²ßÂÔÎªSCHED_FIFO
- * @param priority Ïß³ÌÓÅÏÈ¼¶ (1-99)
- * @return ÊÇ·ñ³É¹¦
+ * @brief è®¾ç½®çº¿ç¨‹è°ƒåº¦ç­–ç•¥ä¸ºSCHED_FIFO
+ * @param priority çº¿ç¨‹ä¼˜å…ˆçº§ (1-99)
+ * @return æ˜¯å¦æˆåŠŸ
  */
 inline bool set_thread_priority(int priority) {
     struct sched_param param;
@@ -43,9 +43,9 @@ inline bool set_thread_priority(int priority) {
 }
 
 /**
- * @brief ÉèÖÃÏß³ÌCPUÇ×ºÍĞÔ
- * @param cpu_core CPUºËĞÄ±àºÅ
- * @return ÊÇ·ñ³É¹¦
+ * @brief è®¾ç½®çº¿ç¨‹CPUäº²å’Œæ€§
+ * @param cpu_core CPUæ ¸å¿ƒç¼–å·
+ * @return æ˜¯å¦æˆåŠŸ
  */
 inline bool set_thread_affinity(int cpu_core) {
     cpu_set_t cpuset;
@@ -63,8 +63,8 @@ inline bool set_thread_affinity(int cpu_core) {
 }
 
 /**
- * @brief Ëø¶¨ËùÓĞÄÚ´æ£¬·ÀÖ¹Ò³Ãæ½»»»
- * @return ÊÇ·ñ³É¹¦
+ * @brief é”å®šæ‰€æœ‰å†…å­˜ï¼Œé˜²æ­¢é¡µé¢äº¤æ¢
+ * @return æ˜¯å¦æˆåŠŸ
  */
 inline bool lock_memory() {
     int ret = mlockall(MCL_CURRENT | MCL_FUTURE);
@@ -78,7 +78,7 @@ inline bool lock_memory() {
 }
 
 /**
- * @brief ½âËøÄÚ´æ
+ * @brief è§£é”å†…å­˜
  */
 inline void unlock_memory() {
     munlockall();
@@ -86,20 +86,21 @@ inline void unlock_memory() {
 }
 
 /**
- * @brief Ô¤·ÖÅäÕ»¿Õ¼äÒÔ±ÜÃâRTÆÚ¼äµÄÒ³Ãæ´íÎó
- * @param stack_size Õ»´óĞ¡ (×Ö½Ú)
+ * @brief é¢„åˆ†é…æ ˆç©ºé—´ä»¥é¿å…RTæœŸé—´çš„é¡µé¢é”™è¯¯
+ * @param stack_size æ ˆå¤§å° (å­—èŠ‚)
  */
 inline void prefault_stack(size_t stack_size = 8 * 1024) {
-    volatile char stack[stack_size];
+    volatile char* stack = static_cast<volatile char*>(alloca(stack_size));
     for (size_t i = 0; i < stack_size; i += 4096) {
         stack[i] = 0;
     }
+    (void)stack;  // é˜²æ­¢unused warning
     LOG_DEBUG("Stack prefaulted: %zu bytes", stack_size);
 }
 
 /**
- * @brief ¼ì²éÊÇ·ñÓµÓĞRTÈ¨ÏŞ
- * @return ÊÇ·ñÓĞRTÈ¨ÏŞ
+ * @brief æ£€æŸ¥æ˜¯å¦æ‹¥æœ‰RTæƒé™
+ * @return æ˜¯å¦æœ‰RTæƒé™
  */
 inline bool check_rt_capabilities() {
     struct rlimit rlim;
@@ -108,7 +109,7 @@ inline bool check_rt_capabilities() {
         return false;
     }
 
-    LOG_INFO("RLIMIT_RTPRIO: soft=%lu, hard=%lu", 
+    LOG_INFO("RLIMIT_RTPRIO: soft=%lu, hard=%lu",
              (unsigned long)rlim.rlim_cur, (unsigned long)rlim.rlim_max);
 
     if (static_cast<int>(rlim.rlim_cur) < RT_PRIORITY_MAX) {
@@ -122,9 +123,9 @@ inline bool check_rt_capabilities() {
 }
 
 /**
- * @brief ¼ì²éÊÇ·ñÓĞSPIÉè±¸·ÃÎÊÈ¨ÏŞ
- * @param device SPIÉè±¸Â·¾¶
- * @return ÊÇ·ñÓĞÈ¨ÏŞ
+ * @brief æ£€æŸ¥æ˜¯å¦æœ‰SPIè®¾å¤‡è®¿é—®æƒé™
+ * @param device SPIè®¾å¤‡è·¯å¾„
+ * @return æ˜¯å¦æœ‰æƒé™
  */
 inline bool check_spi_permission(const char* device = SPI_DEVICE_DEFAULT) {
     if (access(device, R_OK | W_OK) != 0) {
@@ -136,23 +137,23 @@ inline bool check_spi_permission(const char* device = SPI_DEVICE_DEFAULT) {
 }
 
 /**
- * @brief ³õÊ¼»¯RT»·¾³
- * @return ÊÇ·ñ³É¹¦
+ * @brief åˆå§‹åŒ–RTç¯å¢ƒ
+ * @return æ˜¯å¦æˆåŠŸ
  */
 inline bool init_rt_environment() {
     LOG_INFO("Initializing RT environment...");
 
-    // ¼ì²éRTÈ¨ÏŞ
+    // æ£€æŸ¥RTæƒé™
     if (!check_rt_capabilities()) {
         LOG_WARN("RT capabilities check failed, continuing without RT priority");
     }
 
-    // Ëø¶¨ÄÚ´æ
+    // é”å®šå†…å­˜
     if (!lock_memory()) {
         LOG_WARN("Memory lock failed, continuing anyway");
     }
 
-    // Ô¤·ÖÅäÕ»¿Õ¼ä
+    // é¢„åˆ†é…æ ˆç©ºé—´
     prefault_stack();
 
     LOG_INFO("RT environment initialized");
@@ -160,32 +161,32 @@ inline bool init_rt_environment() {
 }
 
 /**
- * @brief »ñÈ¡CPUºËĞÄÊıÁ¿
- * @return CPUºËĞÄÊı
+ * @brief è·å–CPUæ ¸å¿ƒæ•°é‡
+ * @return CPUæ ¸å¿ƒæ•°
  */
 inline int get_cpu_count() {
     return static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
 }
 
 /**
- * @brief ´òÓ¡ÏµÍ³ĞÅÏ¢
+ * @brief æ‰“å°ç³»ç»Ÿä¿¡æ¯
  */
 inline void print_system_info() {
     LOG_INFO("=== System Information ===");
     LOG_INFO("CPU cores: %d", get_cpu_count());
 
-    // ÄÚºË°æ±¾
+    // å†…æ ¸ç‰ˆæœ¬
     FILE* fp = fopen("/proc/version", "r");
     if (fp) {
         char buf[256];
         if (fgets(buf, sizeof(buf), fp)) {
-            buf[80] = '\0';  // ½Ø¶Ï
+            buf[80] = '\0';  // æˆªæ–­
             LOG_INFO("Kernel: %s...", buf);
         }
         fclose(fp);
     }
 
-    // ¼ì²éRTÄÚºË
+    // æ£€æŸ¥RTå†…æ ¸
     fp = fopen("/sys/kernel/realtime", "r");
     if (fp) {
         int rt = 0;

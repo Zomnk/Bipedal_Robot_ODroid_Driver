@@ -1,6 +1,6 @@
-/**
+ï»¿/**
  * @file data_hub.hpp
- * @brief Êı¾İ½»»»ÖĞĞÄ (Ïß³Ì¼äÍ¨ĞÅ)
+ * @brief æ•°æ®äº¤æ¢ä¸­å¿ƒ (çº¿ç¨‹é—´é€šä¿¡)
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -18,11 +18,11 @@
 namespace odroid {
 
 /**
- * @brief Êı¾İ½»»»ÖĞĞÄ
+ * @brief æ•°æ®äº¤æ¢ä¸­å¿ƒ
  *
- * ÓÃÓÚ²»Í¬Ïß³Ì/Ä£¿é¼äµÄÊı¾İ½»»»:
- * - ¿ØÖÆÖ¸Áî: ÉÏ²ã -> SPIÏß³Ì -> STM32
- * - ·´À¡Êı¾İ: STM32 -> SPIÏß³Ì -> ÉÏ²ã
+ * ç”¨äºä¸åŒçº¿ç¨‹/æ¨¡å—é—´çš„æ•°æ®äº¤æ¢:
+ * - æ§åˆ¶æŒ‡ä»¤: ä¸Šå±‚ -> SPIçº¿ç¨‹ -> STM32
+ * - åé¦ˆæ•°æ®: STM32 -> SPIçº¿ç¨‹ -> ä¸Šå±‚
  */
 class DataHub {
 public:
@@ -31,12 +31,12 @@ public:
         return hub;
     }
 
-    //--------------------------------------------------------------------------
-    // ¿ØÖÆÖ¸Áî (Ğ´Èë¶Ë: ÉÏ²ã/²âÊÔ³ÌĞò, ¶ÁÈ¡¶Ë: SPIÏß³Ì)
-    //--------------------------------------------------------------------------
+    //------------------------------------------------------------------------
+    // æ§åˆ¶æŒ‡ä»¤ (å†™å…¥ç«¯: ä¸Šå±‚/æµ‹è¯•ç¨‹åº, è¯»å–ç«¯: SPIçº¿ç¨‹)
+    //------------------------------------------------------------------------
 
     /**
-     * @brief ÉèÖÃ¿ØÖÆÖ¸Áî
+     * @brief è®¾ç½®æ§åˆ¶æŒ‡ä»¤
      */
     void set_command(const RobotCommand& cmd) {
         command_buffer_.write(cmd);
@@ -45,8 +45,8 @@ public:
     }
 
     /**
-     * @brief »ñÈ¡¿ØÖÆÖ¸Áî
-     * @return ÊÇ·ñÓĞĞÂÖ¸Áî
+     * @brief è·å–æ§åˆ¶æŒ‡ä»¤
+     * @return æ˜¯å¦æœ‰æ–°æŒ‡ä»¤
      */
     bool get_command(RobotCommand& cmd) {
         bool has_new = command_buffer_.read(cmd);
@@ -57,25 +57,25 @@ public:
     }
 
     /**
-     * @brief ¼ì²éÊÇ·ñÓĞĞÂ¿ØÖÆÖ¸Áî
+     * @brief æ£€æŸ¥æ˜¯å¦æœ‰æ–°æ§åˆ¶æŒ‡ä»¤
      */
     bool has_new_command() const {
         return command_updated_.load(std::memory_order_acquire);
     }
 
     /**
-     * @brief »ñÈ¡ÉÏ´ÎÖ¸ÁîÊ±¼ä
+     * @brief è·å–ä¸Šæ¬¡æŒ‡ä»¤æ—¶é—´
      */
     uint64_t get_last_command_time_us() const {
         return last_command_time_us_;
     }
 
-    //--------------------------------------------------------------------------
-    // ·´À¡Êı¾İ (Ğ´Èë¶Ë: SPIÏß³Ì, ¶ÁÈ¡¶Ë: ÉÏ²ã/²âÊÔ³ÌĞò)
-    //--------------------------------------------------------------------------
+    //------------------------------------------------------------------------
+    // åé¦ˆæ•°æ® (å†™å…¥ç«¯: SPIçº¿ç¨‹, è¯»å–ç«¯: ä¸Šå±‚/æµ‹è¯•ç¨‹åº)
+    //------------------------------------------------------------------------
 
     /**
-     * @brief ÉèÖÃ·´À¡Êı¾İ
+     * @brief è®¾ç½®åé¦ˆæ•°æ®
      */
     void set_feedback(const RobotFeedback& fb) {
         feedback_buffer_.write(fb);
@@ -84,8 +84,8 @@ public:
     }
 
     /**
-     * @brief »ñÈ¡·´À¡Êı¾İ
-     * @return ÊÇ·ñÓĞĞÂ·´À¡
+     * @brief è·å–åé¦ˆæ•°æ®
+     * @return æ˜¯å¦æœ‰æ–°åé¦ˆ
      */
     bool get_feedback(RobotFeedback& fb) {
         bool has_new = feedback_buffer_.read(fb);
@@ -96,79 +96,79 @@ public:
     }
 
     /**
-     * @brief ¼ì²éÊÇ·ñÓĞĞÂ·´À¡
+     * @brief æ£€æŸ¥æ˜¯å¦æœ‰æ–°åé¦ˆ
      */
     bool has_new_feedback() const {
         return feedback_updated_.load(std::memory_order_acquire);
     }
 
     /**
-     * @brief »ñÈ¡·´À¡¼ÆÊı
+     * @brief è·å–åé¦ˆè®¡æ•°
      */
     uint64_t get_feedback_count() const {
         return feedback_count_.load();
     }
 
-    //--------------------------------------------------------------------------
-    // ÏµÍ³×´Ì¬
-    //--------------------------------------------------------------------------
+    //------------------------------------------------------------------------
+    // ç³»ç»ŸçŠ¶æ€
+    //------------------------------------------------------------------------
 
     /**
-     * @brief ÉèÖÃÏµÍ³ÔËĞĞ×´Ì¬
+     * @brief è®¾ç½®ç³»ç»Ÿè¿è¡ŒçŠ¶æ€
      */
     void set_running(bool running) {
         running_.store(running, std::memory_order_release);
     }
 
     /**
-     * @brief ¼ì²éÏµÍ³ÊÇ·ñÔËĞĞ
+     * @brief æ£€æŸ¥ç³»ç»Ÿæ˜¯å¦è¿è¡Œ
      */
     bool is_running() const {
         return running_.load(std::memory_order_acquire);
     }
 
     /**
-     * @brief ÉèÖÃ½ô¼±Í£Ö¹
+     * @brief è®¾ç½®ç´§æ€¥åœæ­¢
      */
     void set_emergency_stop(bool stop) {
         emergency_stop_.store(stop, std::memory_order_release);
     }
 
     /**
-     * @brief ¼ì²éÊÇ·ñ½ô¼±Í£Ö¹
+     * @brief æ£€æŸ¥æ˜¯å¦ç´§æ€¥åœæ­¢
      */
     bool is_emergency_stop() const {
         return emergency_stop_.load(std::memory_order_acquire);
     }
 
-    //--------------------------------------------------------------------------
-    // Í³¼ÆÖØÖÃ
-    //--------------------------------------------------------------------------
-
+    //------------------------------------------------------------------------
+    // ç»Ÿè®¡é‡ç½®
+    //------------------------------------------------------------------------
     void reset_stats() {
         feedback_count_.store(0);
     }
 
 private:
+    // æ³¨æ„: åˆå§‹åŒ–é¡ºåºå¿…é¡»ä¸å£°æ˜é¡ºåºä¸€è‡´
     DataHub()
-        : running_(false)
-        , emergency_stop_(false)
-        , command_updated_(false)
-        , feedback_updated_(false)
+        : command_updated_(false)
         , last_command_time_us_(0)
-        , feedback_count_(0) {}
+        , feedback_updated_(false)
+        , feedback_count_(0)
+        , running_(false)
+        , emergency_stop_(false) {}
 
-    // ¿ØÖÆÖ¸Áî»º³åÇø
+    // æ§åˆ¶æŒ‡ä»¤ç¼“å†²åŒº
     TripleBuffer<RobotCommand> command_buffer_;
     std::atomic<bool> command_updated_;
     uint64_t last_command_time_us_;
 
-    // ·´À¡Êı¾İ»º³åÇø
+    // åé¦ˆæ•°æ®ç¼“å†²åŒº
     TripleBuffer<RobotFeedback> feedback_buffer_;
     std::atomic<bool> feedback_updated_;
     std::atomic<uint64_t> feedback_count_;
 
-    // ÏµÍ³×´Ì¬
+    // ç³»ç»ŸçŠ¶æ€
     std::atomic<bool> running_;
     std::atomic<bool> emergency_stop_;
 };

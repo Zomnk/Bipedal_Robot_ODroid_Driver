@@ -29,7 +29,7 @@ namespace odroid {
  */
 class SPICommTask {
 public:
-    SPICommTask() : initialized_(false) {}
+    SPICommTask() : initialized_(false), comm_count_(0), error_count_(0) {}
 
     /**
      * @brief 初始化
@@ -49,23 +49,27 @@ public:
         if (!initialized_) return;
 
         // 获取控制指令
-        RobotCommand cmd = DataHub::instance().get_command();
+        RobotCommand cmd;
+        DataHub::instance().get_command(cmd);
 
         // 编码发送数据
         SPITxBuffer tx_buf;
-        Protocol::encode_command(cmd, tx_buf);
+        Protocol::encode_robot_cmd(cmd, tx_buf);
 
         // SPI传输
         SPIRxBuffer rx_buf;
-        spi_.transfer(tx_buf, rx_buf);
+        if (spi_.transfer(tx_buf, rx_buf)) {
+            // 解码反馈数据
+            RobotFeedback fb;
+            Protocol::decode_robot_fb(rx_buf, fb);
+            fb.timestamp_us = get_time_us();
 
-        // 解码反馈数据
-        RobotFeedback fb;
-        Protocol::decode_feedback(rx_buf, fb);
-        fb.timestamp_us = get_time_us();
-
-        // 更新数据中心
-        DataHub::instance().update_feedback(fb);
+            // 更新数据中心
+            DataHub::instance().set_feedback(fb);
+            comm_count_++;
+        } else {
+            error_count_++;
+        }
     }
 
     /**
@@ -76,9 +80,14 @@ public:
         initialized_ = false;
     }
 
+    uint64_t get_comm_count() const { return comm_count_; }
+    uint64_t get_error_count() const { return error_count_; }
+
 private:
     SPIDriver spi_;
     bool initialized_;
+    uint64_t comm_count_;
+    uint64_t error_count_;
 };
 
 /**
@@ -123,14 +132,15 @@ public:
 
         running_ = true;
 
-        // 创建SPI线程
-        RTThreadConfig spi_cfg;
-        spi_cfg.name = "spi_thread";
-        spi_cfg.priority = RT_PRIORITY_SPI;
-        spi_cfg.cpu_core = CPU_CORE_SPI;
-        spi_cfg.period_us = SPI_PERIOD_US;
+        // 创建SPI线程 (name, period_us, priority, cpu_core)
+        spi_thread_ = std::make_unique<RTThread>(
+            "spi_thread",
+            SPI_PERIOD_US,
+            RT_PRIORITY_SPI,
+            CPU_CORE_SPI
+        );
 
-        spi_thread_ = std::make_unique<RTThread>(spi_cfg, [this]() {
+        spi_thread_->set_loop_task([this]() {
             this->spi_loop();
         });
 
@@ -171,8 +181,8 @@ public:
     /**
      * @brief 获取反馈数据
      */
-    RobotFeedback get_feedback() const {
-        return DataHub::instance().get_feedback();
+    bool get_feedback(RobotFeedback& fb) const {
+        return DataHub::instance().get_feedback(fb);
     }
 
     /**
@@ -189,6 +199,20 @@ public:
         return running_;
     }
 
+    /**
+     * @brief 打印统计信息
+     */
+    void print_stats() const {
+        LOG_INFO("SPI Stats: comm=%lu, errors=%lu",
+                 (unsigned long)spi_task_.get_comm_count(),
+                 (unsigned long)spi_task_.get_error_count());
+        if (spi_thread_) {
+            LOG_INFO("Thread Stats: loops=%lu, missed=%lu",
+                     (unsigned long)spi_thread_->get_loop_count(),
+                     (unsigned long)spi_thread_->get_missed_deadlines());
+        }
+    }
+
 private:
     /**
      * @brief SPI通信循环
@@ -198,7 +222,10 @@ private:
 
         // 调用回调
         if (callback_) {
-            callback_(DataHub::instance().get_feedback());
+            RobotFeedback fb;
+            if (DataHub::instance().get_feedback(fb)) {
+                callback_(fb);
+            }
         }
     }
 
