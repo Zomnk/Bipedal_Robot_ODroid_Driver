@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 3.16)
 project(odroid_robot_driver VERSION 1.0.0 LANGUAGES CXX)
 
-# C++17æ ‡å‡†
+# C++17±ê×¼
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ç¼–è¯‘é€‰é¡¹
+# ±àÒëÑ¡Ïî
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native -ffast-math -funroll-loops -DNDEBUG")
 
-# é»˜è®¤ä½¿ç”¨Debugæ¨¡å¼
+# Ä¬ÈÏÊ¹ÓÃDebugÄ£Ê½
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
@@ -18,10 +18,10 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 
-# æŸ¥æ‰¾ä¾èµ–
+# ²éÕÒÒÀÀµ
 find_package(Threads REQUIRED)
 
-# å¯é€‰: Eigen3 (ç”¨äºEKF, å½“å‰é˜¶æ®µå¯é€‰)
+# ¿ÉÑ¡ Eigen3 (ÓÃÓÚEKF, µ±Ç°½×¶Î¿ÉÑ¡)
 find_package(Eigen3 3.3 QUIET)
 if(Eigen3_FOUND)
     message(STATUS "Eigen3 found: ${EIGEN3_INCLUDE_DIR}")
@@ -30,66 +30,40 @@ else()
     message(STATUS "Eigen3 not found, EKF will be disabled")
 endif()
 
-# å¤´æ–‡ä»¶ç›®å½•
-include_directories(${CMAKE_SOURCE_DIR}/include)
+# Header-only¿â (ËùÓĞ´úÂë¶¼ÔÚ.hppÍ·ÎÄ¼şÖĞ)
+add_library(robot_driver_lib INTERFACE)
 
-# æºæ–‡ä»¶
-set(COMMON_SOURCES
-    src/common/logger.cpp
-    src/common/time_utils.cpp
+target_include_directories(robot_driver_lib INTERFACE
+    ${CMAKE_SOURCE_DIR}/include
 )
 
-set(REALTIME_SOURCES
-    src/realtime/rt_thread.cpp
-    src/realtime/rt_utils.cpp
-)
-
-set(COMMUNICATION_SOURCES
-    src/communication/spi_driver.cpp
-    src/communication/protocol.cpp
-)
-
-set(CORE_SOURCES
-    src/core/data_hub.cpp
-    src/core/robot_interface.cpp
-)
-
-# ä¸»ç¨‹åºåº“
-add_library(robot_driver_lib STATIC
-    ${COMMON_SOURCES}
-    ${REALTIME_SOURCES}
-    ${COMMUNICATION_SOURCES}
-    ${CORE_SOURCES}
-)
-
-target_link_libraries(robot_driver_lib
+target_link_libraries(robot_driver_lib INTERFACE
     Threads::Threads
-    rt      # POSIXå®æ—¶æ‰©å±•
+    rt      # POSIXÊµÊ±À©Õ¹
 )
 
 if(Eigen3_FOUND)
-    target_link_libraries(robot_driver_lib Eigen3::Eigen)
+    target_link_libraries(robot_driver_lib INTERFACE Eigen3::Eigen)
 endif()
 
-# ä¸»ç¨‹åº
+# Ö÷³ÌĞò
 add_executable(robot_driver src/main.cpp)
 target_link_libraries(robot_driver robot_driver_lib)
 
-# æµ‹è¯•ç¨‹åº - SPIé€šä¿¡æµ‹è¯•
+# ²âÊÔ³ÌĞò - SPIÍ¨ĞÅ²âÊÔ
 add_executable(test_spi_comm tests/test_spi_comm.cpp)
 target_link_libraries(test_spi_comm robot_driver_lib)
 
-# æµ‹è¯•ç¨‹åº - ç”µæœºæ§åˆ¶æµ‹è¯•
+# ²âÊÔ³ÌĞò - µç»ú¿ØÖÆ²âÊÔ
 add_executable(test_motor_control tests/test_motor_control.cpp)
 target_link_libraries(test_motor_control robot_driver_lib)
 
-# æµ‹è¯•ç¨‹åº - RTæ€§èƒ½æµ‹è¯•
+# ²âÊÔ³ÌĞò - RTĞÔÄÜ²âÊÔ
 add_executable(test_rt_timing tests/test_rt_timing.cpp)
 target_link_libraries(test_rt_timing robot_driver_lib)
 
-# å®‰è£…
+# °²×°
 install(TARGETS robot_driver DESTINATION bin)
 install(DIRECTORY scripts/ DESTINATION bin
         FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-                         GROUP_EXECUTE GROUP_READ
-                         WORLD_EXECUTE WORLD_READ)
+                         GROUP_EXECUTE GROUP_READ)
