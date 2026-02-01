@@ -1,8 +1,6 @@
 /**
  * @file constants.hpp
- * @brief ç³»ç»Ÿå¸¸é‡å®šä¹‰
- * @author Zomnk
- * @date 2026-02-01
+ * @brief ÏµÍ³³£Á¿¶¨Òå
  */
 
 #ifndef ODROID_COMMON_CONSTANTS_HPP
@@ -13,83 +11,66 @@
 namespace odroid {
 
 //==============================================================================
-// æ•°å­¦å¸¸é‡
+// µç»ú²ÎÊı³£Á¿ - ´ïÃîµç»ú
 //==============================================================================
 
-constexpr double PI = 3.14159265358979323846;
-constexpr double DEG_TO_RAD = PI / 180.0;
-constexpr double RAD_TO_DEG = 180.0 / PI;
+// DM6006 (÷Å¹Ø½Ú)
+constexpr float DM6006_POS_MAX    = 12.5f;     // rad
+constexpr float DM6006_VEL_MAX    = 45.0f;     // rad/s
+constexpr float DM6006_TORQUE_MAX = 12.0f;     // Nm
+constexpr float DM6006_KP_MAX     = 500.0f;
+constexpr float DM6006_KD_MAX     = 5.0f;
+
+// DM4340 (´óÍÈ/Ğ¡ÍÈ/Ï¥¹Ø½Ú)
+constexpr float DM4340_POS_MAX    = 12.5f;     // rad
+constexpr float DM4340_VEL_MAX    = 30.0f;     // rad/s
+constexpr float DM4340_TORQUE_MAX = 10.0f;     // Nm
+constexpr float DM4340_KP_MAX     = 500.0f;
+constexpr float DM4340_KD_MAX     = 5.0f;
+
+// DM8006 (õ×¹Ø½Ú)
+constexpr float DM8006_POS_MAX    = 12.5f;     // rad
+constexpr float DM8006_VEL_MAX    = 25.0f;     // rad/s
+constexpr float DM8006_TORQUE_MAX = 24.0f;     // Nm
+constexpr float DM8006_KP_MAX     = 500.0f;
+constexpr float DM8006_KD_MAX     = 5.0f;
 
 //==============================================================================
-// æ—¶é—´å¸¸é‡
+// IMU²ÎÊı³£Á¿
 //==============================================================================
 
-constexpr uint64_t US_PER_MS = 1000;
-constexpr uint64_t US_PER_S = 1000000;
-constexpr uint64_t NS_PER_US = 1000;
-constexpr uint64_t NS_PER_MS = 1000000;
-constexpr uint64_t NS_PER_S = 1000000000;
+constexpr float IMU_ACCEL_MAX = 160.0f;        // m/s^2 (Ô¼16g)
+constexpr float IMU_GYRO_MAX  = 2000.0f;       // deg/s
+constexpr float IMU_EULER_MAX = 180.0f;        // deg
 
 //==============================================================================
-// æ§åˆ¶å‘¨æœŸ
+// SPIÍ¨ĞÅ³£Á¿
 //==============================================================================
 
-// SPIé€šä¿¡å‘¨æœŸ (1kHz)
-constexpr uint64_t SPI_PERIOD_US = 1000;
-// æ’å€¼å™¨å‘¨æœŸ (500Hz) - æš‚æœªä½¿ç”¨
-constexpr uint64_t INTERP_PERIOD_US = 2000;
-// TCPé€šä¿¡å‘¨æœŸ (200Hz) - æš‚æœªä½¿ç”¨
-constexpr uint64_t TCP_PERIOD_US = 5000;
+constexpr size_t SPI_TX_WORDS = 80;            // ·¢ËÍ»º³åÇø´óĞ¡ (uint16_t)
+constexpr size_t SPI_RX_WORDS = 84;            // ½ÓÊÕ»º³åÇø´óĞ¡ (uint16_t)
+constexpr size_t SPI_TX_BYTES = SPI_TX_WORDS * 2;
+constexpr size_t SPI_RX_BYTES = SPI_RX_WORDS * 2;
+
+constexpr uint32_t SPI_SPEED_HZ = 10000000;    // 10 MHz
 
 //==============================================================================
-// RTçº¿ç¨‹ä¼˜å…ˆçº§
+// ÊµÊ±¿ØÖÆ³£Á¿
 //==============================================================================
 
-constexpr int RT_PRIORITY_MAX = 99;
-constexpr int RT_PRIORITY_SPI = 99;         // SPIé€šä¿¡ (æœ€é«˜)
-constexpr int RT_PRIORITY_INTERP = 80;      // æ’å€¼å™¨
-constexpr int RT_PRIORITY_TCP_RX = 50;      // TCPæ¥æ”¶
-constexpr int RT_PRIORITY_TCP_TX = 50;      // TCPå‘é€
-constexpr int RT_PRIORITY_LOGGER = 10;      // æ—¥å¿—
+constexpr uint32_t CONTROL_PERIOD_US = 1000;   // 1ms¿ØÖÆÖÜÆÚ
+constexpr uint32_t CONTROL_FREQ_HZ   = 1000;   // 1kHz¿ØÖÆÆµÂÊ
 
 //==============================================================================
-// CPUäº²å’Œæ€§
+// Ê±¼ä¹¤¾ßº¯Êı
 //==============================================================================
 
-// ODroid-C4æœ‰4ä¸ªæ ¸å¿ƒ (0-3)
-constexpr int CPU_CORE_SPI = 3;             // SPIé€šä¿¡ä¸“ç”¨æ ¸å¿ƒ
-constexpr int CPU_CORE_INTERP = 2;          // æ’å€¼å™¨ä¸“ç”¨æ ¸å¿ƒ
-constexpr int CPU_CORE_TCP = 1;             // TCPé€šä¿¡æ ¸å¿ƒ
-constexpr int CPU_CORE_OTHER = 0;           // å…¶ä»–ä»»åŠ¡æ ¸å¿ƒ
-
-//==============================================================================
-// SPIé…ç½®
-//==============================================================================
-
-// é»˜è®¤SPIè®¾å¤‡
-constexpr const char* SPI_DEVICE_DEFAULT = "/dev/spidev0.0";
-// SPIé€Ÿåº¦ (Hz)
-constexpr uint32_t SPI_SPEED_HZ = 10000000;  // 10MHz
-// SPIä½å®½
-constexpr uint8_t SPI_BITS_PER_WORD = 16;
-
-//==============================================================================
-// è¶…æ—¶é…ç½®
-//==============================================================================
-
-// STM32é€šä¿¡è¶…æ—¶ (æ¯«ç§’)
-constexpr uint32_t STM32_TIMEOUT_MS = 100;
-// Jetsonè¿æ¥è¶…æ—¶ (æ¯«ç§’)
-constexpr uint32_t JETSON_TIMEOUT_MS = 1000;
-
-//==============================================================================
-// ç¼“å†²åŒºå¤§å°
-//==============================================================================
-
-// æ— é”é˜Ÿåˆ—å®¹é‡
-constexpr size_t QUEUE_CAPACITY = 64;
-// æ—¥å¿—ç¼“å†²åŒºå¤§å°
-constexpr size_t LOG_BUFFER_SIZE = 4096;
+inline uint64_t get_time_us() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return static_cast<uint64_t>(ts.tv_sec) * 1000000ULL + 
+           static_cast<uint64_t>(ts.tv_nsec) / 1000ULL;
+}
 
 } // namespace odroid
 
