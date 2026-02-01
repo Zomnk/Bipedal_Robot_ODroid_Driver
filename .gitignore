@@ -1,4 +1,4 @@
-# Build directories
+﻿# Build directories
 build/
 build-*/
 cmake-build-*/
@@ -45,10 +45,10 @@ Thumbs.db
 *.log
 logs/
 
-# Debug files
+# Debug files (core dump files, not include/core directory)
 *.dSYM/
-core
-core.*
+/core
+core.[0-9]*
 
 # Temporary files
 *.tmp
@@ -58,4 +58,3 @@ core.*
 # Package files
 *.tar.gz
 *.zip
-*.rar
