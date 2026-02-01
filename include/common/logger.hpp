@@ -1,6 +1,8 @@
 /**
  * @file logger.hpp
  * @brief 日志系统
+ * @author Zomnk
+ * @date 2026-02-01
  */
 
 #ifndef ODROID_COMMON_LOGGER_HPP
@@ -10,21 +12,27 @@
 #include <cstdarg>
 #include <ctime>
 
-// 取消可能由编译器定义的DEBUG宏，避免冲突
+// 取消可能由编译器定义的DEBUG宏，避免与LogLevel::DEBUG冲突
 #ifdef DEBUG
 #undef DEBUG
 #endif
 
 namespace odroid {
 
+/**
+ * @brief 日志级别枚举
+ */
 enum class LogLevel {
-    DEBUG = 0,
-    INFO  = 1,
-    WARN  = 2,
-    ERROR = 3,
-    FATAL = 4
+    DEBUG = 0,  // 调试信息
+    INFO  = 1,  // 一般信息
+    WARN  = 2,  // 警告
+    ERROR = 3,  // 错误
+    FATAL = 4   // 致命错误
 };
 
+/**
+ * @brief 日志类 (单例模式)
+ */
 class Logger {
 public:
     static Logger& instance() {
@@ -38,33 +46,39 @@ public:
     void log(LogLevel level, const char* file, int line, const char* fmt, ...) {
         if (level < level_) return;
 
+        // 获取时间戳
         time_t now = time(nullptr);
         struct tm* tm_info = localtime(&now);
         char time_buf[32];
         strftime(time_buf, sizeof(time_buf), "%H:%M:%S", tm_info);
 
+        // 获取级别字符串
         const char* level_str = get_level_str(level);
+        
+        // 打印日志头
         fprintf(stderr, "[%s][%s] %s:%d: ", time_buf, level_str, file, line);
 
+        // 打印日志内容
         va_list args;
         va_start(args, fmt);
         vfprintf(stderr, fmt, args);
         va_end(args);
-        
+
         fprintf(stderr, "\n");
+        fflush(stderr);
     }
 
 private:
     Logger() : level_(LogLevel::INFO) {}
-    
-    const char* get_level_str(LogLevel level) {
+
+    const char* get_level_str(LogLevel level) const {
         switch (level) {
             case LogLevel::DEBUG: return "DEBUG";
-            case LogLevel::INFO:  return "INFO";
-            case LogLevel::WARN:  return "WARN";
+            case LogLevel::INFO:  return "INFO ";
+            case LogLevel::WARN:  return "WARN ";
             case LogLevel::ERROR: return "ERROR";
             case LogLevel::FATAL: return "FATAL";
-            default: return "UNKNOWN";
+            default: return "?????";
         }
     }
 
@@ -74,7 +88,7 @@ private:
 } // namespace odroid
 
 //==============================================================================
-// 日志宏定义
+// 日志宏定义 (在namespace外部定义)
 //==============================================================================
 
 #define LOG_DEBUG(fmt, ...) \

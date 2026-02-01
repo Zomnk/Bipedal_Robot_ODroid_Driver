@@ -1,6 +1,6 @@
 /**
  * @file spi_driver.hpp
- * @brief Linux SPIä¸»æœºé©±åŠ¨
+ * @brief Linux SPIÖ÷»úÇı¶¯
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <vector>
+#include <cerrno>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -25,37 +25,35 @@
 namespace odroid {
 
 /**
- * @brief SPIé©±åŠ¨é…ç½®
+ * @brief SPIÇı¶¯ÅäÖÃ
  */
 struct SPIConfig {
     std::string device = SPI_DEVICE_DEFAULT;
     uint32_t speed_hz = SPI_SPEED_HZ;
     uint8_t bits_per_word = SPI_BITS_PER_WORD;
     uint8_t mode = SPI_MODE_0;
-    
-    // STM32 SPIé…ç½®: MSB first, CPOL=0, CPHA=0
-    bool lsb_first = false;
+    bool lsb_first = false;  // STM32Ê¹ÓÃMSB first
 };
 
 /**
- * @brief SPIé©±åŠ¨ç±»
+ * @brief SPIÇı¶¯Àà
  */
 class SPIDriver {
 public:
-    SPIDriver() : fd_(-1), is_open_(false) {}
-    
+    SPIDriver() : fd_(-1), is_open_(false), transfer_count_(0), transfer_errors_(0) {}
+
     ~SPIDriver() {
         close();
     }
 
-    // ç¦æ­¢æ‹·è´
+    // ½ûÖ¹¿½±´
     SPIDriver(const SPIDriver&) = delete;
     SPIDriver& operator=(const SPIDriver&) = delete;
 
     /**
-     * @brief æ‰“å¼€SPIè®¾å¤‡
-     * @param config SPIé…ç½®
-     * @return æ˜¯å¦æˆåŠŸ
+     * @brief ´ò¿ªSPIÉè±¸
+     * @param config SPIÅäÖÃ
+     * @return ÊÇ·ñ³É¹¦
      */
     bool open(const SPIConfig& config = SPIConfig()) {
         if (is_open_) {
@@ -65,15 +63,15 @@ public:
 
         config_ = config;
 
-        // æ‰“å¼€è®¾å¤‡
+        // ´ò¿ªÉè±¸
         fd_ = ::open(config_.device.c_str(), O_RDWR);
         if (fd_ < 0) {
-            LOG_ERROR("Failed to open SPI device %s: %s", 
+            LOG_ERROR("Failed to open SPI device %s: %s",
                      config_.device.c_str(), strerror(errno));
             return false;
         }
 
-        // è®¾ç½®SPIæ¨¡å¼
+        // ÉèÖÃSPIÄ£Ê½
         if (ioctl(fd_, SPI_IOC_WR_MODE, &config_.mode) < 0) {
             LOG_ERROR("Failed to set SPI mode: %s", strerror(errno));
             ::close(fd_);
@@ -81,7 +79,7 @@ public:
             return false;
         }
 
-        // è®¾ç½®ä½å®½
+        // ÉèÖÃÎ»¿í
         if (ioctl(fd_, SPI_IOC_WR_BITS_PER_WORD, &config_.bits_per_word) < 0) {
             LOG_ERROR("Failed to set SPI bits per word: %s", strerror(errno));
             ::close(fd_);
@@ -89,7 +87,7 @@ public:
             return false;
         }
 
-        // è®¾ç½®é€Ÿåº¦
+        // ÉèÖÃËÙ¶È
         if (ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &config_.speed_hz) < 0) {
             LOG_ERROR("Failed to set SPI speed: %s", strerror(errno));
             ::close(fd_);
@@ -97,23 +95,23 @@ public:
             return false;
         }
 
-        // è®¾ç½®LSB/MSB
+        // ÉèÖÃLSB/MSB
         uint8_t lsb = config_.lsb_first ? 1 : 0;
         if (ioctl(fd_, SPI_IOC_WR_LSB_FIRST, &lsb) < 0) {
             LOG_WARN("Failed to set SPI LSB first: %s", strerror(errno));
-            // éè‡´å‘½é”™è¯¯ï¼Œç»§ç»­
+            // ·ÇÖÂÃü´íÎó£¬¼ÌĞø
         }
 
         is_open_ = true;
         LOG_INFO("SPI device %s opened: mode=%d, bits=%d, speed=%u Hz",
-                config_.device.c_str(), config_.mode, 
+                config_.device.c_str(), config_.mode,
                 config_.bits_per_word, config_.speed_hz);
 
         return true;
     }
 
     /**
-     * @brief å…³é—­SPIè®¾å¤‡
+     * @brief ¹Ø±ÕSPIÉè±¸
      */
     void close() {
         if (fd_ >= 0) {
@@ -125,16 +123,16 @@ public:
     }
 
     /**
-     * @brief æ£€æŸ¥è®¾å¤‡æ˜¯å¦æ‰“å¼€
+     * @brief ¼ì²éÉè±¸ÊÇ·ñ´ò¿ª
      */
     bool is_open() const { return is_open_; }
 
     /**
-     * @brief å…¨åŒå·¥ä¼ è¾“ (16ä½æ¨¡å¼)
-     * @param tx_buf å‘é€ç¼“å†²åŒº (uint16_tæ•°ç»„)
-     * @param rx_buf æ¥æ”¶ç¼“å†²åŒº (uint16_tæ•°ç»„)
-     * @param len ä¼ è¾“çš„uint16_tæ•°é‡
-     * @return æ˜¯å¦æˆåŠŸ
+     * @brief È«Ë«¹¤´«Êä (16Î»Ä£Ê½)
+     * @param tx_buf ·¢ËÍ»º³åÇø (uint16_tÊı×é)
+     * @param rx_buf ½ÓÊÕ»º³åÇø (uint16_tÊı×é)
+     * @param len ´«ÊäµÄuint16_tÊıÁ¿
+     * @return ÊÇ·ñ³É¹¦
      */
     bool transfer_16bit(const uint16_t* tx_buf, uint16_t* rx_buf, size_t len) {
         if (!is_open_) {
@@ -144,10 +142,10 @@ public:
 
         struct spi_ioc_transfer tr;
         memset(&tr, 0, sizeof(tr));
-        
+
         tr.tx_buf = reinterpret_cast<unsigned long>(tx_buf);
         tr.rx_buf = reinterpret_cast<unsigned long>(rx_buf);
-        tr.len = len * 2;  // å­—èŠ‚æ•°
+        tr.len = len * 2;  // ×Ö½ÚÊı
         tr.speed_hz = config_.speed_hz;
         tr.bits_per_word = config_.bits_per_word;
         tr.delay_usecs = 0;
@@ -164,35 +162,30 @@ public:
     }
 
     /**
-     * @brief å…¨åŒå·¥ä¼ è¾“ (ä½¿ç”¨SPIBuffer)
-     * @param tx_buf å‘é€ç¼“å†²åŒº
-     * @param rx_buf æ¥æ”¶ç¼“å†²åŒº
-     * @return æ˜¯å¦æˆåŠŸ
+     * @brief È«Ë«¹¤´«Êä (Ê¹ÓÃSPIBuffer)
+     * @param tx_buf ·¢ËÍ»º³åÇø (40 words)
+     * @param rx_buf ½ÓÊÕ»º³åÇø (60 words)
+     * @return ÊÇ·ñ³É¹¦
      */
     bool transfer(const SPITxBuffer& tx_buf, SPIRxBuffer& rx_buf) {
-        // éœ€è¦å¤„ç†å¤§å°ä¸åŒ¹é…çš„æƒ…å†µ
-        // TX: CONTROL_DATA_NUM (40) uint16_t
-        // RX: FEEDBACK_DATA_NUM (60) uint16_t
-        // ä¼ è¾“æ—¶ä½¿ç”¨è¾ƒå¤§çš„é‚£ä¸ª
-        
-        static_assert(FEEDBACK_DATA_NUM >= CONTROL_DATA_NUM, 
-                      "RX buffer must be >= TX buffer");
-        
-        // æ‰©å±•TXç¼“å†²åŒºåˆ°RXå¤§å°ï¼Œå¡«å……0
-        uint16_t tx_extended[FEEDBACK_DATA_NUM] = {0};
+        // TX±ÈRXĞ¡£¬ĞèÒªÀ©Õ¹TX»º³åÇø
+        static_assert(SPI_RX_WORDS >= SPI_TX_WORDS, "RX buffer must be >= TX buffer");
+
+        // À©Õ¹TX»º³åÇøµ½RX´óĞ¡
+        uint16_t tx_extended[SPI_RX_WORDS] = {0};
         memcpy(tx_extended, tx_buf.data, sizeof(tx_buf.data));
-        
-        return transfer_16bit(tx_extended, rx_buf.data, FEEDBACK_DATA_NUM);
+
+        return transfer_16bit(tx_extended, rx_buf.data, SPI_RX_WORDS);
     }
 
     /**
-     * @brief è·å–ä¼ è¾“ç»Ÿè®¡
+     * @brief »ñÈ¡´«ÊäÍ³¼Æ
      */
     uint64_t get_transfer_count() const { return transfer_count_; }
     uint64_t get_transfer_errors() const { return transfer_errors_; }
 
     /**
-     * @brief é‡ç½®ç»Ÿè®¡
+     * @brief ÖØÖÃÍ³¼Æ
      */
     void reset_stats() {
         transfer_count_ = 0;
@@ -203,9 +196,9 @@ private:
     int fd_;
     bool is_open_;
     SPIConfig config_;
-    
-    uint64_t transfer_count_ = 0;
-    uint64_t transfer_errors_ = 0;
+
+    uint64_t transfer_count_;
+    uint64_t transfer_errors_;
 };
 
 } // namespace odroid

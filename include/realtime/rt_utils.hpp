@@ -1,6 +1,6 @@
 /**
  * @file rt_utils.hpp
- * @brief å®æ—¶çº¿ç¨‹å·¥å…·å‡½æ•°
+ * @brief ÊµÊ±Ïß³Ì¹¤¾ßº¯Êı
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -11,12 +11,12 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <cerrno>
 #include <sched.h>
 #include <pthread.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <unistd.h>
-#include <errno.h>
 
 #include "common/logger.hpp"
 #include "common/constants.hpp"
@@ -24,47 +24,47 @@
 namespace odroid {
 
 /**
- * @brief è®¾ç½®çº¿ç¨‹è°ƒåº¦ç­–ç•¥ä¸ºSCHED_FIFO
- * @param priority çº¿ç¨‹ä¼˜å…ˆçº§ (1-99)
- * @return æ˜¯å¦æˆåŠŸ
+ * @brief ÉèÖÃÏß³Ìµ÷¶È²ßÂÔÎªSCHED_FIFO
+ * @param priority Ïß³ÌÓÅÏÈ¼¶ (1-99)
+ * @return ÊÇ·ñ³É¹¦
  */
 inline bool set_thread_priority(int priority) {
     struct sched_param param;
     param.sched_priority = priority;
-    
+
     int ret = pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
     if (ret != 0) {
         LOG_ERROR("Failed to set SCHED_FIFO priority %d: %s", priority, strerror(ret));
         return false;
     }
-    
+
     LOG_INFO("Set thread priority to SCHED_FIFO:%d", priority);
     return true;
 }
 
 /**
- * @brief è®¾ç½®çº¿ç¨‹CPUäº²å’Œæ€§
- * @param cpu_core CPUæ ¸å¿ƒç¼–å·
- * @return æ˜¯å¦æˆåŠŸ
+ * @brief ÉèÖÃÏß³ÌCPUÇ×ºÍĞÔ
+ * @param cpu_core CPUºËĞÄ±àºÅ
+ * @return ÊÇ·ñ³É¹¦
  */
 inline bool set_thread_affinity(int cpu_core) {
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(cpu_core, &cpuset);
-    
+
     int ret = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
     if (ret != 0) {
         LOG_ERROR("Failed to set CPU affinity to core %d: %s", cpu_core, strerror(ret));
         return false;
     }
-    
+
     LOG_INFO("Set thread affinity to CPU core %d", cpu_core);
     return true;
 }
 
 /**
- * @brief é”å®šæ‰€æœ‰å†…å­˜ï¼Œé˜²æ­¢é¡µé¢äº¤æ¢
- * @return æ˜¯å¦æˆåŠŸ
+ * @brief Ëø¶¨ËùÓĞÄÚ´æ£¬·ÀÖ¹Ò³Ãæ½»»»
+ * @return ÊÇ·ñ³É¹¦
  */
 inline bool lock_memory() {
     int ret = mlockall(MCL_CURRENT | MCL_FUTURE);
@@ -72,13 +72,13 @@ inline bool lock_memory() {
         LOG_ERROR("Failed to lock memory: %s", strerror(errno));
         return false;
     }
-    
+
     LOG_INFO("Memory locked successfully");
     return true;
 }
 
 /**
- * @brief è§£é”å†…å­˜
+ * @brief ½âËøÄÚ´æ
  */
 inline void unlock_memory() {
     munlockall();
@@ -86,8 +86,8 @@ inline void unlock_memory() {
 }
 
 /**
- * @brief é¢„åˆ†é…æ ˆç©ºé—´ä»¥é¿å…RTæœŸé—´çš„é¡µé¢é”™è¯¯
- * @param stack_size æ ˆå¤§å° (å­—èŠ‚)
+ * @brief Ô¤·ÖÅäÕ»¿Õ¼äÒÔ±ÜÃâRTÆÚ¼äµÄÒ³Ãæ´íÎó
+ * @param stack_size Õ»´óĞ¡ (×Ö½Ú)
  */
 inline void prefault_stack(size_t stack_size = 8 * 1024) {
     volatile char stack[stack_size];
@@ -98,8 +98,8 @@ inline void prefault_stack(size_t stack_size = 8 * 1024) {
 }
 
 /**
- * @brief æ£€æŸ¥æ˜¯å¦æ‹¥æœ‰RTæƒé™
- * @return æ˜¯å¦æœ‰RTæƒé™
+ * @brief ¼ì²éÊÇ·ñÓµÓĞRTÈ¨ÏŞ
+ * @return ÊÇ·ñÓĞRTÈ¨ÏŞ
  */
 inline bool check_rt_capabilities() {
     struct rlimit rlim;
@@ -107,25 +107,26 @@ inline bool check_rt_capabilities() {
         LOG_ERROR("Failed to get RLIMIT_RTPRIO: %s", strerror(errno));
         return false;
     }
-    
-    LOG_INFO("RLIMIT_RTPRIO: soft=%lu, hard=%lu", rlim.rlim_cur, rlim.rlim_max);
-    
-    if (rlim.rlim_cur < RT_PRIORITY_MAX) {
-        LOG_WARN("RT priority limit (%lu) is less than required (%d)", 
-                 rlim.rlim_cur, RT_PRIORITY_MAX);
+
+    LOG_INFO("RLIMIT_RTPRIO: soft=%lu, hard=%lu", 
+             (unsigned long)rlim.rlim_cur, (unsigned long)rlim.rlim_max);
+
+    if (static_cast<int>(rlim.rlim_cur) < RT_PRIORITY_MAX) {
+        LOG_WARN("RT priority limit (%lu) is less than required (%d)",
+                 (unsigned long)rlim.rlim_cur, RT_PRIORITY_MAX);
         LOG_WARN("Run 'sudo setcap cap_sys_nice+ep <executable>' or add to /etc/security/limits.conf");
         return false;
     }
-    
+
     return true;
 }
 
 /**
- * @brief æ£€æŸ¥æ˜¯å¦æœ‰SPIè®¾å¤‡è®¿é—®æƒé™
- * @param device SPIè®¾å¤‡è·¯å¾„
- * @return æ˜¯å¦æœ‰æƒé™
+ * @brief ¼ì²éÊÇ·ñÓĞSPIÉè±¸·ÃÎÊÈ¨ÏŞ
+ * @param device SPIÉè±¸Â·¾¶
+ * @return ÊÇ·ñÓĞÈ¨ÏŞ
  */
-inline bool check_spi_permission(const char* device) {
+inline bool check_spi_permission(const char* device = SPI_DEVICE_DEFAULT) {
     if (access(device, R_OK | W_OK) != 0) {
         LOG_ERROR("No access to %s: %s", device, strerror(errno));
         LOG_WARN("Run 'sudo usermod -a -G spi $USER' and re-login, or use sudo");
@@ -135,57 +136,56 @@ inline bool check_spi_permission(const char* device) {
 }
 
 /**
- * @brief åˆå§‹åŒ–RTç¯å¢ƒ
- * @return æ˜¯å¦æˆåŠŸ
+ * @brief ³õÊ¼»¯RT»·¾³
+ * @return ÊÇ·ñ³É¹¦
  */
 inline bool init_rt_environment() {
     LOG_INFO("Initializing RT environment...");
-    
-    // æ£€æŸ¥RTæƒé™
+
+    // ¼ì²éRTÈ¨ÏŞ
     if (!check_rt_capabilities()) {
         LOG_WARN("RT capabilities check failed, continuing without RT priority");
     }
-    
-    // é”å®šå†…å­˜
+
+    // Ëø¶¨ÄÚ´æ
     if (!lock_memory()) {
         LOG_WARN("Memory lock failed, continuing anyway");
     }
-    
-    // é¢„åˆ†é…æ ˆç©ºé—´
+
+    // Ô¤·ÖÅäÕ»¿Õ¼ä
     prefault_stack();
-    
+
     LOG_INFO("RT environment initialized");
     return true;
 }
 
 /**
- * @brief è·å–CPUæ ¸å¿ƒæ•°é‡
- * @return CPUæ ¸å¿ƒæ•°
+ * @brief »ñÈ¡CPUºËĞÄÊıÁ¿
+ * @return CPUºËĞÄÊı
  */
 inline int get_cpu_count() {
-    return sysconf(_SC_NPROCESSORS_ONLN);
+    return static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
 }
 
 /**
- * @brief æ‰“å°ç³»ç»Ÿä¿¡æ¯
+ * @brief ´òÓ¡ÏµÍ³ĞÅÏ¢
  */
 inline void print_system_info() {
     LOG_INFO("=== System Information ===");
     LOG_INFO("CPU cores: %d", get_cpu_count());
-    
-    // å†…æ ¸ç‰ˆæœ¬
+
+    // ÄÚºË°æ±¾
     FILE* fp = fopen("/proc/version", "r");
     if (fp) {
         char buf[256];
         if (fgets(buf, sizeof(buf), fp)) {
-            // åªå–ç¬¬ä¸€è¡Œçš„å‰80ä¸ªå­—ç¬¦
-            buf[80] = '\0';
+            buf[80] = '\0';  // ½Ø¶Ï
             LOG_INFO("Kernel: %s...", buf);
         }
         fclose(fp);
     }
-    
-    // æ£€æŸ¥RTå†…æ ¸
+
+    // ¼ì²éRTÄÚºË
     fp = fopen("/sys/kernel/realtime", "r");
     if (fp) {
         int rt = 0;
@@ -196,7 +196,7 @@ inline void print_system_info() {
     } else {
         LOG_WARN("Not a RT-PREEMPT kernel (non-critical for testing)");
     }
-    
+
     LOG_INFO("==========================");
 }
 

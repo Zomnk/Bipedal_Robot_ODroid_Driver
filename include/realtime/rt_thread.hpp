@@ -1,6 +1,6 @@
 /**
  * @file rt_thread.hpp
- * @brief å®æ—¶çº¿ç¨‹å°è£…ç±»
+ * @brief ÊµÊ±Ïß³Ì·â×°Àà
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -20,18 +20,18 @@
 namespace odroid {
 
 /**
- * @brief å®æ—¶çº¿ç¨‹å°è£…ç±»
+ * @brief ÊµÊ±Ïß³Ì·â×°Àà
  */
 class RTThread {
 public:
     using TaskFunc = std::function<void()>;
 
     /**
-     * @brief æ„é€ å‡½æ•°
-     * @param name çº¿ç¨‹åç§°
-     * @param period_us å‘¨æœŸ (å¾®ç§’), 0è¡¨ç¤ºéå‘¨æœŸæ€§çº¿ç¨‹
-     * @param priority SCHED_FIFOä¼˜å…ˆçº§ (1-99)
-     * @param cpu_core CPUäº²å’Œæ€§ (-1è¡¨ç¤ºä¸è®¾ç½®)
+     * @brief ¹¹Ôìº¯Êı
+     * @param name Ïß³ÌÃû³Æ
+     * @param period_us ÖÜÆÚ (Î¢Ãë), 0±íÊ¾·ÇÖÜÆÚĞÔÏß³Ì
+     * @param priority SCHED_FIFOÓÅÏÈ¼¶ (1-99)
+     * @param cpu_core CPUÇ×ºÍĞÔ (-1±íÊ¾²»ÉèÖÃ)
      */
     RTThread(const std::string& name, uint64_t period_us, int priority, int cpu_core = -1)
         : name_(name)
@@ -46,34 +46,34 @@ public:
         stop();
     }
 
-    // ç¦æ­¢æ‹·è´
+    // ½ûÖ¹¿½±´
     RTThread(const RTThread&) = delete;
     RTThread& operator=(const RTThread&) = delete;
 
     /**
-     * @brief è®¾ç½®å¾ªç¯ä»»åŠ¡
+     * @brief ÉèÖÃÑ­»·ÈÎÎñ
      */
     void set_loop_task(TaskFunc task) {
         loop_task_ = std::move(task);
     }
 
     /**
-     * @brief è®¾ç½®åˆå§‹åŒ–ä»»åŠ¡ (åœ¨RTé…ç½®åæ‰§è¡Œä¸€æ¬¡)
+     * @brief ÉèÖÃ³õÊ¼»¯ÈÎÎñ (ÔÚRTÅäÖÃºóÖ´ĞĞÒ»´Î)
      */
     void set_init_task(TaskFunc task) {
         init_task_ = std::move(task);
     }
 
     /**
-     * @brief è®¾ç½®æ¸…ç†ä»»åŠ¡ (åœ¨é€€å‡ºå‰æ‰§è¡Œä¸€æ¬¡)
+     * @brief ÉèÖÃÇåÀíÈÎÎñ (ÔÚÍË³öÇ°Ö´ĞĞÒ»´Î)
      */
     void set_cleanup_task(TaskFunc task) {
         cleanup_task_ = std::move(task);
     }
 
     /**
-     * @brief å¯åŠ¨çº¿ç¨‹
-     * @return æ˜¯å¦æˆåŠŸ
+     * @brief Æô¶¯Ïß³Ì
+     * @return ÊÇ·ñ³É¹¦
      */
     bool start() {
         if (running_.load()) {
@@ -88,14 +88,14 @@ public:
 
         running_.store(true);
         thread_ = std::thread(&RTThread::thread_func, this);
-        
+
         LOG_INFO("Thread '%s' started (period=%lu us, priority=%d, cpu=%d)",
-                 name_.c_str(), period_us_, priority_, cpu_core_);
+                 name_.c_str(), (unsigned long)period_us_, priority_, cpu_core_);
         return true;
     }
 
     /**
-     * @brief åœæ­¢çº¿ç¨‹
+     * @brief Í£Ö¹Ïß³Ì
      */
     void stop() {
         if (!running_.load()) return;
@@ -104,33 +104,35 @@ public:
         if (thread_.joinable()) {
             thread_.join();
         }
-        
+
         LOG_INFO("Thread '%s' stopped (loops=%lu, missed=%lu)",
-                 name_.c_str(), loop_count_.load(), missed_deadlines_.load());
+                 name_.c_str(), 
+                 (unsigned long)loop_count_.load(), 
+                 (unsigned long)missed_deadlines_.load());
     }
 
     /**
-     * @brief æ£€æŸ¥æ˜¯å¦è¿è¡Œä¸­
+     * @brief ¼ì²éÊÇ·ñÔËĞĞÖĞ
      */
     bool is_running() const { return running_.load(); }
 
     /**
-     * @brief è·å–å¾ªç¯è®¡æ•°
+     * @brief »ñÈ¡Ñ­»·¼ÆÊı
      */
     uint64_t get_loop_count() const { return loop_count_.load(); }
 
     /**
-     * @brief è·å–é”™è¿‡deadlineçš„æ¬¡æ•°
+     * @brief »ñÈ¡´í¹ıdeadlineµÄ´ÎÊı
      */
     uint64_t get_missed_deadlines() const { return missed_deadlines_.load(); }
 
     /**
-     * @brief è·å–è¿è¡Œæ—¶ç»Ÿè®¡
+     * @brief »ñÈ¡ÔËĞĞÊ±Í³¼Æ
      */
     const RuntimeStats& get_stats() const { return stats_; }
 
     /**
-     * @brief é‡ç½®ç»Ÿè®¡æ•°æ®
+     * @brief ÖØÖÃÍ³¼ÆÊı¾İ
      */
     void reset_stats() {
         loop_count_.store(0);
@@ -140,7 +142,7 @@ public:
 
 private:
     void thread_func() {
-        // è®¾ç½®RTå±æ€§
+        // ÉèÖÃRTÊôĞÔ
         if (priority_ > 0) {
             set_thread_priority(priority_);
         }
@@ -149,37 +151,37 @@ private:
         }
         prefault_stack();
 
-        // æ‰§è¡Œåˆå§‹åŒ–ä»»åŠ¡
+        // Ö´ĞĞ³õÊ¼»¯ÈÎÎñ
         if (init_task_) {
             init_task_();
         }
 
-        // å‘¨æœŸæ€§å¾ªç¯
+        // ÖÜÆÚĞÔÑ­»·
         if (period_us_ > 0) {
             PeriodicTimer timer(period_us_);
-            
+
             while (running_.load()) {
                 Timer loop_timer;
-                
-                // æ‰§è¡Œä»»åŠ¡
+
+                // Ö´ĞĞÈÎÎñ
                 loop_task_();
-                
-                // ç»Ÿè®¡æ‰§è¡Œæ—¶é—´
+
+                // Í³¼ÆÖ´ĞĞÊ±¼ä
                 uint64_t exec_time = loop_timer.elapsed_us();
                 stats_.update(exec_time);
                 loop_count_++;
-                
-                // ç­‰å¾…ä¸‹ä¸€ä¸ªå‘¨æœŸ
+
+                // µÈ´ıÏÂÒ»¸öÖÜÆÚ
                 if (timer.wait()) {
                     missed_deadlines_++;
                 }
             }
         } else {
-            // éå‘¨æœŸæ€§çº¿ç¨‹ï¼Œå•æ¬¡æ‰§è¡Œ
+            // ·ÇÖÜÆÚĞÔÏß³Ì£¬µ¥´ÎÖ´ĞĞ
             loop_task_();
         }
 
-        // æ‰§è¡Œæ¸…ç†ä»»åŠ¡
+        // Ö´ĞĞÇåÀíÈÎÎñ
         if (cleanup_task_) {
             cleanup_task_();
         }
@@ -189,14 +191,14 @@ private:
     uint64_t period_us_;
     int priority_;
     int cpu_core_;
-    
+
     std::atomic<bool> running_;
     std::thread thread_;
-    
+
     TaskFunc loop_task_;
     TaskFunc init_task_;
     TaskFunc cleanup_task_;
-    
+
     std::atomic<uint64_t> loop_count_;
     std::atomic<uint64_t> missed_deadlines_;
     RuntimeStats stats_;

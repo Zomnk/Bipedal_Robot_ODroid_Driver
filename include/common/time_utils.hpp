@@ -1,8 +1,11 @@
 /**
  * @file time_utils.hpp
- * @brief é«˜ç²¾åº¦æ—¶é—´å·¥å…·
+ * @brief ¸ß¾«¶ÈÊ±¼ä¹¤¾ß
  * @author Zomnk
  * @date 2026-02-01
+ * 
+ * ×¢Òâ: »ù±¾µÄ get_time_us() º¯Êı¶¨ÒåÔÚ constants.hpp ÖĞ
+ * ±¾ÎÄ¼şÌá¹©¸ü·á¸»µÄÊ±¼ä¹¤¾ßÀà
  */
 
 #ifndef ODROID_COMMON_TIME_UTILS_HPP
@@ -10,83 +13,87 @@
 
 #include <cstdint>
 #include <ctime>
-#include <chrono>
+#include <cmath>
+
+#include "constants.hpp"  // °üº¬ get_time_us()
 
 namespace odroid {
 
+//==============================================================================
+// À©Õ¹Ê±¼äº¯Êı
+//==============================================================================
+
 /**
- * @brief è·å–å½“å‰æ—¶é—´ (çº³ç§’)
+ * @brief »ñÈ¡µ±Ç°Ê±¼ä (ÄÉÃë)
  */
 inline uint64_t get_time_ns() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return static_cast<uint64_t>(ts.tv_sec) * 1000000000ULL + ts.tv_nsec;
+    return static_cast<uint64_t>(ts.tv_sec) * 1000000000ULL + 
+           static_cast<uint64_t>(ts.tv_nsec);
 }
 
 /**
- * @brief è·å–å½“å‰æ—¶é—´ (å¾®ç§’)
- */
-inline uint64_t get_time_us() {
-    return get_time_ns() / 1000;
-}
-
-/**
- * @brief è·å–å½“å‰æ—¶é—´ (æ¯«ç§’)
+ * @brief »ñÈ¡µ±Ç°Ê±¼ä (ºÁÃë)
  */
 inline uint64_t get_time_ms() {
     return get_time_ns() / 1000000;
 }
 
 /**
- * @brief è·å–å½“å‰æ—¶é—´ (ç§’, æµ®ç‚¹æ•°)
+ * @brief »ñÈ¡µ±Ç°Ê±¼ä (Ãë, ¸¡µãÊı)
  */
 inline double get_time_sec() {
     return static_cast<double>(get_time_ns()) / 1e9;
 }
 
 /**
- * @brief é«˜ç²¾åº¦ä¼‘çœ  (çº³ç§’)
+ * @brief ¸ß¾«¶ÈĞİÃß (ÄÉÃë)
  */
 inline void sleep_ns(uint64_t ns) {
     struct timespec ts;
-    ts.tv_sec = ns / 1000000000ULL;
-    ts.tv_nsec = ns % 1000000000ULL;
+    ts.tv_sec = static_cast<time_t>(ns / 1000000000ULL);
+    ts.tv_nsec = static_cast<long>(ns % 1000000000ULL);
     clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, nullptr);
 }
 
 /**
- * @brief é«˜ç²¾åº¦ä¼‘çœ  (å¾®ç§’)
+ * @brief ¸ß¾«¶ÈĞİÃß (Î¢Ãë)
  */
 inline void sleep_us(uint64_t us) {
     sleep_ns(us * 1000);
 }
 
 /**
- * @brief é«˜ç²¾åº¦ä¼‘çœ  (æ¯«ç§’)
+ * @brief ¸ß¾«¶ÈĞİÃß (ºÁÃë)
  */
 inline void sleep_ms(uint64_t ms) {
     sleep_ns(ms * 1000000);
 }
 
 /**
- * @brief ä¼‘çœ ç›´åˆ°æŒ‡å®šæ—¶åˆ» (çº³ç§’)
+ * @brief ĞİÃßÖ±µ½Ö¸¶¨Ê±¿Ì (ÄÉÃë, ¾ø¶ÔÊ±¼ä)
  */
 inline void sleep_until_ns(uint64_t target_ns) {
     struct timespec ts;
-    ts.tv_sec = target_ns / 1000000000ULL;
-    ts.tv_nsec = target_ns % 1000000000ULL;
+    ts.tv_sec = static_cast<time_t>(target_ns / 1000000000ULL);
+    ts.tv_nsec = static_cast<long>(target_ns % 1000000000ULL);
     clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, nullptr);
 }
 
+//==============================================================================
+// ¼ÆÊ±Æ÷Àà
+//==============================================================================
+
 /**
- * @brief ç®€å•è®¡æ—¶å™¨ç±»
+ * @brief ¼òµ¥¼ÆÊ±Æ÷Àà
  */
 class Timer {
 public:
     Timer() : start_time_(get_time_ns()) {}
 
     void reset() { start_time_ = get_time_ns(); }
-    
+
     uint64_t elapsed_ns() const { return get_time_ns() - start_time_; }
     uint64_t elapsed_us() const { return elapsed_ns() / 1000; }
     uint64_t elapsed_ms() const { return elapsed_ns() / 1000000; }
@@ -97,21 +104,22 @@ private:
 };
 
 /**
- * @brief å‘¨æœŸè®¡æ—¶å™¨ (ç”¨äºRTå¾ªç¯)
+ * @brief ÖÜÆÚ¼ÆÊ±Æ÷ (ÓÃÓÚRTÑ­»·)
  */
 class PeriodicTimer {
 public:
-    explicit PeriodicTimer(uint64_t period_us) 
-        : period_ns_(period_us * 1000), next_time_(get_time_ns() + period_ns_) {}
+    explicit PeriodicTimer(uint64_t period_us)
+        : period_ns_(period_us * 1000)
+        , next_time_(get_time_ns() + period_ns_) {}
 
     /**
-     * @brief ç­‰å¾…ç›´åˆ°ä¸‹ä¸€ä¸ªå‘¨æœŸ
-     * @return æ˜¯å¦å‘ç”Ÿäº†è¶…æ—¶(é”™è¿‡äº†deadline)
+     * @brief µÈ´ıÖ±µ½ÏÂÒ»¸öÖÜÆÚ
+     * @return ÊÇ·ñ·¢ÉúÁË³¬Ê± (´í¹ıÁËdeadline)
      */
     bool wait() {
         uint64_t now = get_time_ns();
         if (now >= next_time_) {
-            // é”™è¿‡äº†deadline
+            // ´í¹ıÁËdeadline
             next_time_ = now + period_ns_;
             return true;
         }
@@ -121,21 +129,10 @@ public:
     }
 
     /**
-     * @brief é‡ç½®å®šæ—¶å™¨
+     * @brief ÖØÖÃ¶¨Ê±Æ÷
      */
     void reset() {
         next_time_ = get_time_ns() + period_ns_;
-    }
-
-    /**
-     * @brief è·å–ä¸Šæ¬¡å¾ªç¯çš„å®é™…å‘¨æœŸ
-     */
-    uint64_t get_actual_period_us() const {
-        static uint64_t last_time = 0;
-        uint64_t now = get_time_ns();
-        uint64_t period = (last_time == 0) ? period_ns_ : (now - last_time);
-        last_time = now;
-        return period / 1000;
     }
 
 private:
@@ -143,12 +140,16 @@ private:
     uint64_t next_time_;
 };
 
+//==============================================================================
+// ÔËĞĞÊ±Í³¼Æ
+//==============================================================================
+
 /**
- * @brief è¿è¡Œæ—¶ç»Ÿè®¡
+ * @brief ÔËĞĞÊ±Í³¼ÆÀà
  */
 class RuntimeStats {
 public:
-    RuntimeStats() : count_(0), sum_(0), sum_sq_(0), min_(UINT64_MAX), max_(0) {}
+    RuntimeStats() { reset(); }
 
     void update(uint64_t value_us) {
         count_++;
@@ -170,7 +171,7 @@ public:
     double mean_us() const { return count_ > 0 ? static_cast<double>(sum_) / count_ : 0; }
     uint64_t min_us() const { return min_ == UINT64_MAX ? 0 : min_; }
     uint64_t max_us() const { return max_; }
-    
+
     double std_dev_us() const {
         if (count_ < 2) return 0;
         double mean = mean_us();
