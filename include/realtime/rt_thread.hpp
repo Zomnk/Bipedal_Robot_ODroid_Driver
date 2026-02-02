@@ -1,6 +1,6 @@
 /**
  * @file rt_thread.hpp
- * @brief ÊµÊ±Ïß³Ì·â×°Àà
+ * @brief å®æ—¶çº¿ç¨‹å°è£…ç±»
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -8,200 +8,125 @@
 #ifndef ODROID_REALTIME_RT_THREAD_HPP
 #define ODROID_REALTIME_RT_THREAD_HPP
 
+#include <thread>
 #include <atomic>
 #include <functional>
-#include <thread>
-#include <string>
 
-#include "common/logger.hpp"
+#include "rt_utils.hpp"
 #include "common/time_utils.hpp"
-#include "realtime/rt_utils.hpp"
 
 namespace odroid {
 
 /**
- * @brief ÊµÊ±Ïß³Ì·â×°Àà
+ * @brief å®æ—¶çº¿ç¨‹ç±» - å‘¨æœŸæ€§æ‰§è¡Œä»»åŠ¡
  */
 class RTThread {
 public:
-    using TaskFunc = std::function<void()>;
-
-    /**
-     * @brief ¹¹Ôìº¯Êı
-     * @param name Ïß³ÌÃû³Æ
-     * @param period_us ÖÜÆÚ (Î¢Ãë), 0±íÊ¾·ÇÖÜÆÚĞÔÏß³Ì
-     * @param priority SCHED_FIFOÓÅÏÈ¼¶ (1-99)
-     * @param cpu_core CPUÇ×ºÍĞÔ (-1±íÊ¾²»ÉèÖÃ)
-     */
-    RTThread(const std::string& name, uint64_t period_us, int priority, int cpu_core = -1)
-        : name_(name)
-        , period_us_(period_us)
-        , priority_(priority)
-        , cpu_core_(cpu_core)
-        , running_(false)
-        , loop_count_(0)
-        , missed_deadlines_(0) {}
-
-    ~RTThread() {
-        stop();
-    }
-
-    // ½ûÖ¹¿½±´
+    using TaskFunction = std::function<void()>;
+    
+    RTThread() = default;
+    ~RTThread() { stop(); }
+    
+    // ç¦æ­¢æ‹·è´
     RTThread(const RTThread&) = delete;
     RTThread& operator=(const RTThread&) = delete;
-
+    
     /**
-     * @brief ÉèÖÃÑ­»·ÈÎÎñ
+     * @brief å¯åŠ¨å®æ—¶çº¿ç¨‹
+     * @param task å‘¨æœŸæ€§æ‰§è¡Œçš„ä»»åŠ¡å‡½æ•°
+     * @param period_us å‘¨æœŸ (å¾®ç§’)
+     * @param priority å®æ—¶ä¼˜å…ˆçº§ (1-99)
+     * @param cpu_id ç»‘å®šçš„CPUæ ¸å¿ƒ
+     * @return æˆåŠŸè¿”å›true
      */
-    void set_loop_task(TaskFunc task) {
-        loop_task_ = std::move(task);
-    }
-
-    /**
-     * @brief ÉèÖÃ³õÊ¼»¯ÈÎÎñ (ÔÚRTÅäÖÃºóÖ´ĞĞÒ»´Î)
-     */
-    void set_init_task(TaskFunc task) {
-        init_task_ = std::move(task);
-    }
-
-    /**
-     * @brief ÉèÖÃÇåÀíÈÎÎñ (ÔÚÍË³öÇ°Ö´ĞĞÒ»´Î)
-     */
-    void set_cleanup_task(TaskFunc task) {
-        cleanup_task_ = std::move(task);
-    }
-
-    /**
-     * @brief Æô¶¯Ïß³Ì
-     * @return ÊÇ·ñ³É¹¦
-     */
-    bool start() {
-        if (running_.load()) {
-            LOG_WARN("Thread '%s' already running", name_.c_str());
+    bool start(TaskFunction task, uint64_t period_us, int priority, int cpu_id) {
+        if (running_) {
+            LOG_WARN("çº¿ç¨‹å·²åœ¨è¿è¡Œ");
             return false;
         }
-
-        if (!loop_task_) {
-            LOG_ERROR("Thread '%s' has no loop task", name_.c_str());
-            return false;
-        }
-
-        running_.store(true);
+        
+        task_ = std::move(task);
+        period_us_ = period_us;
+        priority_ = priority;
+        cpu_id_ = cpu_id;
+        running_ = true;
+        
         thread_ = std::thread(&RTThread::thread_func, this);
-
-        LOG_INFO("Thread '%s' started (period=%lu us, priority=%d, cpu=%d)",
-                 name_.c_str(), (unsigned long)period_us_, priority_, cpu_core_);
         return true;
     }
-
+    
     /**
-     * @brief Í£Ö¹Ïß³Ì
+     * @brief åœæ­¢çº¿ç¨‹
      */
     void stop() {
-        if (!running_.load()) return;
-
-        running_.store(false);
-        if (thread_.joinable()) {
-            thread_.join();
+        if (running_) {
+            running_ = false;
+            if (thread_.joinable()) {
+                thread_.join();
+            }
+            LOG_INFO("å®æ—¶çº¿ç¨‹å·²åœæ­¢");
         }
-
-        LOG_INFO("Thread '%s' stopped (loops=%lu, missed=%lu)",
-                 name_.c_str(), 
-                 (unsigned long)loop_count_.load(), 
-                 (unsigned long)missed_deadlines_.load());
     }
-
+    
     /**
-     * @brief ¼ì²éÊÇ·ñÔËĞĞÖĞ
+     * @brief æ£€æŸ¥çº¿ç¨‹æ˜¯å¦åœ¨è¿è¡Œ
      */
-    bool is_running() const { return running_.load(); }
-
+    bool is_running() const { return running_; }
+    
     /**
-     * @brief »ñÈ¡Ñ­»·¼ÆÊı
+     * @brief è·å–å®é™…å‘¨æœŸç»Ÿè®¡
      */
-    uint64_t get_loop_count() const { return loop_count_.load(); }
-
-    /**
-     * @brief »ñÈ¡´í¹ıdeadlineµÄ´ÎÊı
-     */
-    uint64_t get_missed_deadlines() const { return missed_deadlines_.load(); }
-
-    /**
-     * @brief »ñÈ¡ÔËĞĞÊ±Í³¼Æ
-     */
-    const RuntimeStats& get_stats() const { return stats_; }
-
-    /**
-     * @brief ÖØÖÃÍ³¼ÆÊı¾İ
-     */
-    void reset_stats() {
-        loop_count_.store(0);
-        missed_deadlines_.store(0);
-        stats_.reset();
+    uint64_t get_cycle_count() const { return cycle_count_; }
+    uint64_t get_max_latency_us() const { return max_latency_us_; }
+    double get_avg_latency_us() const { 
+        return cycle_count_ > 0 ? static_cast<double>(total_latency_us_) / cycle_count_ : 0; 
     }
-
+    
 private:
     void thread_func() {
-        // ÉèÖÃRTÊôĞÔ
-        if (priority_ > 0) {
-            set_thread_priority(priority_);
-        }
-        if (cpu_core_ >= 0) {
-            set_thread_affinity(cpu_core_);
-        }
-        prefault_stack();
-
-        // Ö´ĞĞ³õÊ¼»¯ÈÎÎñ
-        if (init_task_) {
-            init_task_();
-        }
-
-        // ÖÜÆÚĞÔÑ­»·
-        if (period_us_ > 0) {
-            PeriodicTimer timer(period_us_);
-
-            while (running_.load()) {
-                Timer loop_timer;
-
-                // Ö´ĞĞÈÎÎñ
-                loop_task_();
-
-                // Í³¼ÆÖ´ĞĞÊ±¼ä
-                uint64_t exec_time = loop_timer.elapsed_us();
-                stats_.update(exec_time);
-                loop_count_++;
-
-                // µÈ´ıÏÂÒ»¸öÖÜÆÚ
-                if (timer.wait()) {
-                    missed_deadlines_++;
-                }
+        // é…ç½®å®æ—¶ç¯å¢ƒ
+        setup_realtime_thread(priority_, cpu_id_);
+        
+        PeriodicTimer timer(period_us_);
+        uint64_t last_time = get_time_us();
+        
+        LOG_INFO("å®æ—¶çº¿ç¨‹å¯åŠ¨: å‘¨æœŸ=%lu us, ä¼˜å…ˆçº§=%d, CPU=%d", 
+                 period_us_, priority_, cpu_id_);
+        
+        while (running_) {
+            uint64_t now = get_time_us();
+            uint64_t latency = (now > last_time) ? (now - last_time - period_us_) : 0;
+            
+            // æ›´æ–°ç»Ÿè®¡
+            cycle_count_++;
+            total_latency_us_ += latency;
+            if (latency > max_latency_us_) {
+                max_latency_us_ = latency;
             }
-        } else {
-            // ·ÇÖÜÆÚĞÔÏß³Ì£¬µ¥´ÎÖ´ĞĞ
-            loop_task_();
-        }
-
-        // Ö´ĞĞÇåÀíÈÎÎñ
-        if (cleanup_task_) {
-            cleanup_task_();
+            
+            last_time = now;
+            
+            // æ‰§è¡Œä»»åŠ¡
+            if (task_) {
+                task_();
+            }
+            
+            // ç­‰å¾…ä¸‹ä¸€ä¸ªå‘¨æœŸ
+            timer.wait();
         }
     }
-
-    std::string name_;
-    uint64_t period_us_;
-    int priority_;
-    int cpu_core_;
-
-    std::atomic<bool> running_;
+    
     std::thread thread_;
-
-    TaskFunc loop_task_;
-    TaskFunc init_task_;
-    TaskFunc cleanup_task_;
-
-    std::atomic<uint64_t> loop_count_;
-    std::atomic<uint64_t> missed_deadlines_;
-    RuntimeStats stats_;
+    TaskFunction task_;
+    uint64_t period_us_ = 1000;
+    int priority_ = 80;
+    int cpu_id_ = 0;
+    std::atomic<bool> running_{false};
+    
+    // ç»Ÿè®¡ä¿¡æ¯
+    std::atomic<uint64_t> cycle_count_{0};
+    std::atomic<uint64_t> max_latency_us_{0};
+    std::atomic<uint64_t> total_latency_us_{0};
 };
 
 } // namespace odroid

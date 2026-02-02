@@ -1,6 +1,6 @@
-﻿/**
+/**
  * @file data_hub.hpp
- * @brief 数据交换中心 (线程间通信)
+ * @brief 数据中心 - 管理机器人状态和指令
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -8,21 +8,17 @@
 #ifndef ODROID_CORE_DATA_HUB_HPP
 #define ODROID_CORE_DATA_HUB_HPP
 
-#include <atomic>
 #include <mutex>
+#include <atomic>
 
 #include "common/types.hpp"
-#include "common/time_utils.hpp"
+#include "common/constants.hpp"
 #include "realtime/lock_free_buffer.hpp"
 
 namespace odroid {
 
 /**
- * @brief 数据交换中心
- *
- * 用于不同线程/模块间的数据交换:
- * - 控制指令: 上层 -> SPI线程 -> STM32
- * - 反馈数据: STM32 -> SPI线程 -> 上层
+ * @brief 数据中心类 - 线程安全的数据存储和交换
  */
 class DataHub {
 public:
@@ -30,147 +26,101 @@ public:
         static DataHub hub;
         return hub;
     }
-
-    //------------------------------------------------------------------------
-    // 控制指令 (写入端: 上层/测试程序, 读取端: SPI线程)
-    //------------------------------------------------------------------------
-
+    
+    //==========================================================================
+    // 控制指令接口 (上层算法 -> SPI发送)
+    //==========================================================================
+    
     /**
-     * @brief 设置控制指令
+     * @brief 设置机器人控制指令
+     * @param cmd 控制指令
      */
     void set_command(const RobotCommand& cmd) {
         command_buffer_.write(cmd);
-        command_updated_.store(true, std::memory_order_release);
-        last_command_time_us_ = get_time_us();
     }
-
+    
     /**
-     * @brief 获取控制指令
-     * @return 是否有新指令
+     * @brief 获取最新的控制指令
+     * @param cmd 输出参数
+     * @return 有有效指令返回true
      */
     bool get_command(RobotCommand& cmd) {
-        bool has_new = command_buffer_.read(cmd);
-        if (has_new) {
-            command_updated_.store(false, std::memory_order_release);
-        }
-        return has_new;
+        return command_buffer_.read(cmd);
     }
-
+    
+    //==========================================================================
+    // 反馈数据接口 (SPI接收 -> 上层算法)
+    //==========================================================================
+    
     /**
-     * @brief 检查是否有新控制指令
+     * @brief 更新机器人反馈数据
+     * @param feedback 反馈数据
      */
-    bool has_new_command() const {
-        return command_updated_.load(std::memory_order_acquire);
+    void update_feedback(const RobotFeedback& feedback) {
+        feedback_buffer_.write(feedback);
     }
-
+    
     /**
-     * @brief 获取上次指令时间
+     * @brief 获取最新的反馈数据
+     * @param feedback 输出参数
+     * @return 有有效数据返回true
      */
-    uint64_t get_last_command_time_us() const {
-        return last_command_time_us_;
+    bool get_feedback(RobotFeedback& feedback) {
+        return feedback_buffer_.read(feedback);
     }
-
-    //------------------------------------------------------------------------
-    // 反馈数据 (写入端: SPI线程, 读取端: 上层/测试程序)
-    //------------------------------------------------------------------------
-
+    
+    //==========================================================================
+    // SPI缓冲区接口 (协议层使用)
+    //==========================================================================
+    
     /**
-     * @brief 设置反馈数据
+     * @brief 获取SPI发送缓冲区引用
      */
-    void set_feedback(const RobotFeedback& fb) {
-        feedback_buffer_.write(fb);
-        feedback_updated_.store(true, std::memory_order_release);
-        feedback_count_++;
-    }
-
+    SPITxBuffer& get_tx_buffer() { return tx_buffer_; }
+    const SPITxBuffer& get_tx_buffer() const { return tx_buffer_; }
+    
     /**
-     * @brief 获取反馈数据
-     * @return 是否有新反馈
+     * @brief 获取SPI接收缓冲区引用
      */
-    bool get_feedback(RobotFeedback& fb) {
-        bool has_new = feedback_buffer_.read(fb);
-        if (has_new) {
-            feedback_updated_.store(false, std::memory_order_release);
-        }
-        return has_new;
-    }
-
+    SPIRxBuffer& get_rx_buffer() { return rx_buffer_; }
+    const SPIRxBuffer& get_rx_buffer() const { return rx_buffer_; }
+    
+    //==========================================================================
+    // 状态信息
+    //==========================================================================
+    
     /**
-     * @brief 检查是否有新反馈
+     * @brief 增加SPI传输计数
      */
-    bool has_new_feedback() const {
-        return feedback_updated_.load(std::memory_order_acquire);
-    }
-
+    void increment_transfer_count() { transfer_count_++; }
+    
     /**
-     * @brief 获取反馈计数
+     * @brief 获取传输计数
      */
-    uint64_t get_feedback_count() const {
-        return feedback_count_.load();
-    }
-
-    //------------------------------------------------------------------------
-    // 系统状态
-    //------------------------------------------------------------------------
-
+    uint64_t get_transfer_count() const { return transfer_count_; }
+    
     /**
-     * @brief 设置系统运行状态
+     * @brief 检查通信是否正常
      */
-    void set_running(bool running) {
-        running_.store(running, std::memory_order_release);
-    }
-
-    /**
-     * @brief 检查系统是否运行
-     */
-    bool is_running() const {
-        return running_.load(std::memory_order_acquire);
-    }
-
-    /**
-     * @brief 设置紧急停止
-     */
-    void set_emergency_stop(bool stop) {
-        emergency_stop_.store(stop, std::memory_order_release);
-    }
-
-    /**
-     * @brief 检查是否紧急停止
-     */
-    bool is_emergency_stop() const {
-        return emergency_stop_.load(std::memory_order_acquire);
-    }
-
-    //------------------------------------------------------------------------
-    // 统计重置
-    //------------------------------------------------------------------------
-    void reset_stats() {
-        feedback_count_.store(0);
-    }
-
+    bool is_communication_ok() const { return communication_ok_; }
+    void set_communication_ok(bool ok) { communication_ok_ = ok; }
+    
 private:
-    // 注意: 初始化顺序必须与声明顺序一致
-    DataHub()
-        : command_updated_(false)
-        , last_command_time_us_(0)
-        , feedback_updated_(false)
-        , feedback_count_(0)
-        , running_(false)
-        , emergency_stop_(false) {}
-
-    // 控制指令缓冲区
-    TripleBuffer<RobotCommand> command_buffer_;
-    std::atomic<bool> command_updated_;
-    uint64_t last_command_time_us_;
-
-    // 反馈数据缓冲区
-    TripleBuffer<RobotFeedback> feedback_buffer_;
-    std::atomic<bool> feedback_updated_;
-    std::atomic<uint64_t> feedback_count_;
-
-    // 系统状态
-    std::atomic<bool> running_;
-    std::atomic<bool> emergency_stop_;
+    DataHub() 
+        : transfer_count_(0)
+        , communication_ok_(false) {}
+    
+    // 使用最新值缓冲区进行无锁通信
+    LatestValueBuffer<RobotCommand> command_buffer_;
+    LatestValueBuffer<RobotFeedback> feedback_buffer_;
+    
+    // SPI原始缓冲区
+    SPITxBuffer tx_buffer_;
+    SPIRxBuffer rx_buffer_;
+    
+    // 状态信息
+    std::atomic<uint64_t> transfer_count_;
+    std::atomic<bool> communication_ok_;
 };
 
 } // namespace odroid

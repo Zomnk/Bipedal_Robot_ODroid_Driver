@@ -1,6 +1,6 @@
 /**
  * @file lock_free_buffer.hpp
- * @brief ÎŞËø»·ĞÎ»º³åÇø (µ¥Éú²úÕß-µ¥Ïû·ÑÕß)
+ * @brief æ— é”ç¯å½¢ç¼“å†²åŒº - ç”¨äºå®æ—¶çº¿ç¨‹é—´é€šä¿¡
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -11,192 +11,139 @@
 #include <atomic>
 #include <array>
 #include <cstddef>
-#include <cstdint>
 
 namespace odroid {
 
 /**
- * @brief SPSCÎŞËø»·ĞÎ¶ÓÁĞ
- * @tparam T Êı¾İÀàĞÍ
- * @tparam Capacity ÈİÁ¿ (±ØĞëÊÇ2µÄÃİ)
+ * @brief æ— é”å•ç”Ÿäº§è€…å•æ¶ˆè´¹è€…ç¼“å†²åŒº
+ * @tparam T æ•°æ®ç±»å‹
+ * @tparam N ç¼“å†²åŒºå¤§å° (å¿…é¡»æ˜¯2çš„å¹‚)
  */
-template <typename T, size_t Capacity>
-class SPSCQueue {
-    static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be power of 2");
-    static_assert(Capacity >= 2, "Capacity must be at least 2");
-
+template<typename T, size_t N>
+class LockFreeBuffer {
+    static_assert((N & (N - 1)) == 0, "ç¼“å†²åŒºå¤§å°å¿…é¡»æ˜¯2çš„å¹‚");
+    
 public:
-    SPSCQueue() : head_(0), tail_(0) {}
-
+    LockFreeBuffer() : head_(0), tail_(0) {}
+    
     /**
-     * @brief Èë¶Ó
-     * @param item ÒªÈë¶ÓµÄÊı¾İ
-     * @return ÊÇ·ñ³É¹¦ (¶ÓÁĞÂúÊ±·µ»Øfalse)
+     * @brief å†™å…¥æ•°æ® (ç”Ÿäº§è€…è°ƒç”¨)
+     * @param item è¦å†™å…¥çš„æ•°æ®
+     * @return æˆåŠŸè¿”å›true, ç¼“å†²åŒºæ»¡è¿”å›false
      */
     bool push(const T& item) {
         size_t head = head_.load(std::memory_order_relaxed);
-        size_t next = (head + 1) & (Capacity - 1);
-
-        if (next == tail_.load(std::memory_order_acquire)) {
-            return false;  // ¶ÓÁĞÂú
+        size_t next_head = (head + 1) & (N - 1);
+        
+        if (next_head == tail_.load(std::memory_order_acquire)) {
+            return false;  // ç¼“å†²åŒºæ»¡
         }
-
+        
         buffer_[head] = item;
-        head_.store(next, std::memory_order_release);
+        head_.store(next_head, std::memory_order_release);
         return true;
     }
-
+    
     /**
-     * @brief ³ö¶Ó
-     * @param item Êä³ö²ÎÊı
-     * @return ÊÇ·ñ³É¹¦ (¶ÓÁĞ¿ÕÊ±·µ»Øfalse)
+     * @brief è¯»å–æ•°æ® (æ¶ˆè´¹è€…è°ƒç”¨)
+     * @param item è¯»å–çš„æ•°æ®å­˜æ”¾ä½ç½®
+     * @return æˆåŠŸè¿”å›true, ç¼“å†²åŒºç©ºè¿”å›false
      */
     bool pop(T& item) {
         size_t tail = tail_.load(std::memory_order_relaxed);
-
+        
         if (tail == head_.load(std::memory_order_acquire)) {
-            return false;  // ¶ÓÁĞ¿Õ
+            return false;  // ç¼“å†²åŒºç©º
         }
-
+        
         item = buffer_[tail];
-        tail_.store((tail + 1) & (Capacity - 1), std::memory_order_release);
+        tail_.store((tail + 1) & (N - 1), std::memory_order_release);
         return true;
     }
-
+    
     /**
-     * @brief ²é¿´¶ÓÊ×µ«²»ÒÆ³ı
-     */
-    bool peek(T& item) const {
-        size_t tail = tail_.load(std::memory_order_relaxed);
-
-        if (tail == head_.load(std::memory_order_acquire)) {
-            return false;
-        }
-
-        item = buffer_[tail];
-        return true;
-    }
-
-    /**
-     * @brief ¼ì²éÊÇ·ñÎª¿Õ
+     * @brief æ£€æŸ¥ç¼“å†²åŒºæ˜¯å¦ä¸ºç©º
      */
     bool empty() const {
-        return head_.load(std::memory_order_acquire) ==
+        return head_.load(std::memory_order_acquire) == 
                tail_.load(std::memory_order_acquire);
     }
-
+    
     /**
-     * @brief ¼ì²éÊÇ·ñÒÑÂú
+     * @brief æ£€æŸ¥ç¼“å†²åŒºæ˜¯å¦å·²æ»¡
      */
     bool full() const {
-        size_t head = head_.load(std::memory_order_acquire);
-        size_t tail = tail_.load(std::memory_order_acquire);
-        return ((head + 1) & (Capacity - 1)) == tail;
+        size_t next_head = (head_.load(std::memory_order_acquire) + 1) & (N - 1);
+        return next_head == tail_.load(std::memory_order_acquire);
     }
-
+    
     /**
-     * @brief »ñÈ¡µ±Ç°ÔªËØÊıÁ¿
+     * @brief è·å–å½“å‰å…ƒç´ æ•°é‡
      */
     size_t size() const {
         size_t head = head_.load(std::memory_order_acquire);
         size_t tail = tail_.load(std::memory_order_acquire);
-        return (head - tail + Capacity) & (Capacity - 1);
+        return (head - tail + N) & (N - 1);
     }
-
+    
     /**
-     * @brief »ñÈ¡ÈİÁ¿
-     */
-    constexpr size_t capacity() const { return Capacity - 1; }
-
-    /**
-     * @brief Çå¿Õ¶ÓÁĞ
+     * @brief æ¸…ç©ºç¼“å†²åŒº
      */
     void clear() {
-        tail_.store(head_.load(std::memory_order_relaxed),
-                    std::memory_order_relaxed);
+        tail_.store(head_.load(std::memory_order_acquire), std::memory_order_release);
     }
-
+    
 private:
-    alignas(64) std::atomic<size_t> head_;
+    std::array<T, N> buffer_;
+    alignas(64) std::atomic<size_t> head_;  // ç¼“å­˜è¡Œå¯¹é½ï¼Œé¿å…ä¼ªå…±äº«
     alignas(64) std::atomic<size_t> tail_;
-    alignas(64) std::array<T, Capacity> buffer_;
 };
 
 /**
- * @brief Èı»º³åÇø (ÓÃÓÚ×îĞÂÖµ½»»»£¬ÎŞËø)
- * ÊÊÓÃÓÚ£ºÉú²úÕß²»¶Ï²úÉúĞÂÖµ£¬Ïû·ÑÕßÖ»ĞèÒª×îĞÂÖµµÄ³¡¾°
- * @tparam T Êı¾İÀàĞÍ
+ * @brief æœ€æ–°å€¼ç¼“å†²åŒº - åªä¿ç•™æœ€æ–°çš„å€¼
+ * @tparam T æ•°æ®ç±»å‹
  */
-template <typename T>
-class TripleBuffer {
+template<typename T>
+class LatestValueBuffer {
 public:
-    TripleBuffer() : write_idx_(0), read_idx_(1), ready_idx_(2), new_data_(false) {
-        for (int i = 0; i < 3; ++i) {
-            buffers_[i] = T{};
-        }
-    }
-
+    LatestValueBuffer() : has_value_(false) {}
+    
     /**
-     * @brief Ğ´ÈëĞÂÊı¾İ
+     * @brief å†™å…¥æœ€æ–°å€¼ (ç”Ÿäº§è€…è°ƒç”¨)
      */
-    void write(const T& data) {
-        buffers_[write_idx_] = data;
-
-        // ½»»» write ºÍ ready
-        int expected = ready_idx_.load(std::memory_order_relaxed);
-        while (!ready_idx_.compare_exchange_weak(expected, write_idx_,
-                                                  std::memory_order_release,
-                                                  std::memory_order_relaxed)) {
-            expected = ready_idx_.load(std::memory_order_relaxed);
-        }
-        write_idx_ = expected;
-        new_data_.store(true, std::memory_order_release);
+    void write(const T& item) {
+        buffer_[write_index_.load(std::memory_order_relaxed)] = item;
+        write_index_.store(1 - write_index_.load(std::memory_order_relaxed), 
+                          std::memory_order_release);
+        has_value_.store(true, std::memory_order_release);
     }
-
+    
     /**
-     * @brief ¶ÁÈ¡×îĞÂÊı¾İ
-     * @return ÊÇ·ñÓĞĞÂÊı¾İ
+     * @brief è¯»å–æœ€æ–°å€¼ (æ¶ˆè´¹è€…è°ƒç”¨)
+     * @param item è¯»å–çš„æ•°æ®å­˜æ”¾ä½ç½®
+     * @return æœ‰æ•°æ®è¿”å›true
      */
-    bool read(T& data) {
-        if (!new_data_.load(std::memory_order_acquire)) {
-            data = buffers_[read_idx_];
-            return false;  // ·µ»Ø¾ÉÊı¾İ
+    bool read(T& item) {
+        if (!has_value_.load(std::memory_order_acquire)) {
+            return false;
         }
-
-        // ½»»» read ºÍ ready
-        int expected = ready_idx_.load(std::memory_order_relaxed);
-        while (!ready_idx_.compare_exchange_weak(expected, read_idx_,
-                                                  std::memory_order_acquire,
-                                                  std::memory_order_relaxed)) {
-            expected = ready_idx_.load(std::memory_order_relaxed);
-        }
-        read_idx_ = expected;
-        new_data_.store(false, std::memory_order_release);
-
-        data = buffers_[read_idx_];
-        return true;  // ·µ»ØĞÂÊı¾İ
+        
+        // è¯»å–éå†™å…¥çš„é‚£ä¸ªç¼“å†²åŒº
+        item = buffer_[1 - write_index_.load(std::memory_order_acquire)];
+        return true;
     }
-
+    
     /**
-     * @brief Ö±½Ó»ñÈ¡×îĞÂÖµµÄÒıÓÃ (Ö»¶Á)
+     * @brief æ£€æŸ¥æ˜¯å¦æœ‰æ•°æ®
      */
-    const T& peek() const {
-        return buffers_[read_idx_];
+    bool has_value() const {
+        return has_value_.load(std::memory_order_acquire);
     }
-
-    /**
-     * @brief ¼ì²éÊÇ·ñÓĞĞÂÊı¾İ
-     */
-    bool has_new_data() const {
-        return new_data_.load(std::memory_order_acquire);
-    }
-
+    
 private:
-    std::array<T, 3> buffers_;
-    int write_idx_;
-    int read_idx_;
-    std::atomic<int> ready_idx_;
-    std::atomic<bool> new_data_;
+    std::array<T, 2> buffer_;
+    std::atomic<int> write_index_{0};
+    std::atomic<bool> has_value_;
 };
 
 } // namespace odroid

@@ -1,12 +1,12 @@
 /**
  * @file protocol.hpp
- * @brief SPIÍ¨ĞÅĞ­Òé±à½âÂë (ÓëSTM32 F405Æ¥Åä)
+ * @brief SPIé€šä¿¡åè®®ç¼–è§£ç  (ä¸STM32 F405åŒ¹é…)
  * @author Zomnk
  * @date 2026-02-01
- * 
- * Êı¾İ²¼¾Ö:
- * TX (40 words): [×óÍÈ5µç»ú*4²ÎÊı=20] [ÓÒÍÈ5µç»ú*4²ÎÊı=20]
- * RX (60 words): [×óÍÈ5µç»ú*4²ÎÊı=20] [ÓÒÍÈ5µç»ú*4²ÎÊı=20] [IMU0*10] [IMU1*10]
+ *
+ * æ•°æ®å¸ƒå±€:
+ * TX (40 words): [å·¦è…¿5ç”µæœº*4å‚æ•°=20] [å³è…¿5ç”µæœº*4å‚æ•°=20]
+ * RX (60 words): [å·¦è…¿5ç”µæœº*4å‚æ•°=20] [å³è…¿5ç”µæœº*4å‚æ•°=20] [IMU0*10] [IMU1*10]
  */
 
 #ifndef ODROID_COMMUNICATION_PROTOCOL_HPP
@@ -23,189 +23,171 @@
 namespace odroid {
 
 //==============================================================================
-// ±à½âÂë¹¤¾ßº¯Êı
+// ç¼–è§£ç å·¥å…·å‡½æ•°
 //==============================================================================
 
 /**
- * @brief ¶Ô³Æ·¶Î§¸¡µãÊı±àÂë [-max, +max] -> [0, 65535]
+ * @brief å¯¹ç§°èŒƒå›´æœ‰ç¬¦å·æ•°ç¼–ç  [-max, +max] -> [0, 65535]
  */
-inline uint16_t encode_float_symmetric(float value, float max) {
-    value = std::clamp(value, -max, max);
-    float normalized = (value + max) / (2.0f * max);
-    return static_cast<uint16_t>(normalized * 65535.0f + 0.5f);
+inline uint16_t encode_symmetric(float value, float max_val) {
+    value = std::clamp(value, -max_val, max_val);
+    return static_cast<uint16_t>((value / max_val + 1.0f) * 32767.5f);
 }
 
 /**
- * @brief ¶Ô³Æ·¶Î§¸¡µãÊı½âÂë [0, 65535] -> [-max, +max]
+ * @brief å¯¹ç§°èŒƒå›´æœ‰ç¬¦å·æ•°è§£ç  [0, 65535] -> [-max, +max]
  */
-inline float decode_float_symmetric(uint16_t value, float max) {
-    float normalized = static_cast<float>(value) / 65535.0f;
-    return normalized * 2.0f * max - max;
+inline float decode_symmetric(uint16_t raw, float max_val) {
+    return (static_cast<float>(raw) / 32767.5f - 1.0f) * max_val;
 }
 
 /**
- * @brief Ö¸¶¨·¶Î§¸¡µãÊı±àÂë [min, max] -> [0, 65535]
+ * @brief éè´Ÿå€¼ç¼–ç  [0, max] -> [0, 65535]
  */
-inline uint16_t encode_float_range(float value, float min, float max) {
-    value = std::clamp(value, min, max);
-    float normalized = (value - min) / (max - min);
-    return static_cast<uint16_t>(normalized * 65535.0f + 0.5f);
+inline uint16_t encode_unsigned(float value, float max_val) {
+    value = std::clamp(value, 0.0f, max_val);
+    return static_cast<uint16_t>(value / max_val * 65535.0f);
 }
 
 /**
- * @brief Ö¸¶¨·¶Î§¸¡µãÊı½âÂë [0, 65535] -> [min, max]
+ * @brief éè´Ÿå€¼è§£ç  [0, 65535] -> [0, max]
  */
-inline float decode_float_range(uint16_t value, float min, float max) {
-    float normalized = static_cast<float>(value) / 65535.0f;
-    return normalized * (max - min) + min;
+inline float decode_unsigned(uint16_t raw, float max_val) {
+    return static_cast<float>(raw) / 65535.0f * max_val;
 }
 
 //==============================================================================
-// Ğ­Òé±à½âÂëÆ÷
+// åè®®ç¼–è§£ç ç±»
 //==============================================================================
 
 class Protocol {
 public:
-    Protocol() = default;
-
     /**
-     * @brief ±àÂëµ¥¸öµç»úÖ¸Áî (4 words)
-     * ²¼¾Ö: [position, velocity, kp, kd]
+     * @brief ç¼–ç æœºå™¨äººæ§åˆ¶æŒ‡ä»¤åˆ°SPIå‘é€ç¼“å†²åŒº
+     * @param cmd æœºå™¨äººæ§åˆ¶æŒ‡ä»¤
+     * @param tx_buffer SPIå‘é€ç¼“å†²åŒº
      */
-    static void encode_motor_cmd(const MotorCommand& cmd, uint16_t* buf,
-                                  float pos_max, float vel_max, 
-                                  float kp_max, float kd_max) {
-        buf[0] = encode_float_symmetric(cmd.position, pos_max);
-        buf[1] = encode_float_symmetric(cmd.velocity, vel_max);
-        buf[2] = encode_float_range(cmd.kp, 0, kp_max);
-        buf[3] = encode_float_range(cmd.kd, 0, kd_max);
-    }
-
-    /**
-     * @brief ±àÂëÍêÕû»úÆ÷ÈËÖ¸Áî (40 words)
-     * ²¼¾Ö: 
-     *   ×óÍÈ: [hip 0-3] [thigh 4-7] [calf 8-11] [knee 12-15] [ankle 16-19]
-     *   ÓÒÍÈ: [hip 20-23] [thigh 24-27] [calf 28-31] [knee 32-35] [ankle 36-39]
-     */
-    static void encode_robot_cmd(const RobotCommand& cmd, SPITxBuffer& buf) {
-        uint16_t* data = buf.data;
+    static void encode_robot_cmd(const RobotCommand& cmd, SPITxBuffer& tx_buffer) {
+        uint16_t* data = tx_buffer.data;
+        size_t idx = 0;
         
-        // ×óÍÈ (Ë÷Òı 0-19)
-        encode_motor_cmd(cmd.left_leg.hip,   &data[0],  DM6006_POS_MAX, DM6006_VEL_MAX, DM6006_KP_MAX, DM6006_KD_MAX);
-        encode_motor_cmd(cmd.left_leg.thigh, &data[4],  DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_KP_MAX, DM4340_KD_MAX);
-        encode_motor_cmd(cmd.left_leg.calf,  &data[8],  DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_KP_MAX, DM4340_KD_MAX);
-        encode_motor_cmd(cmd.left_leg.knee,  &data[12], DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_KP_MAX, DM4340_KD_MAX);
-        encode_motor_cmd(cmd.left_leg.ankle, &data[16], DM8006_POS_MAX, DM8006_VEL_MAX, DM8006_KP_MAX, DM8006_KD_MAX);
+        // ç¼–ç å·¦è…¿ (5ä¸ªç”µæœº, æ¯ä¸ª4å‚æ•°)
+        encode_leg_cmd(cmd.left_leg, data, idx);
         
-        // ÓÒÍÈ (Ë÷Òı 20-39)
-        encode_motor_cmd(cmd.right_leg.hip,   &data[20], DM6006_POS_MAX, DM6006_VEL_MAX, DM6006_KP_MAX, DM6006_KD_MAX);
-        encode_motor_cmd(cmd.right_leg.thigh, &data[24], DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_KP_MAX, DM4340_KD_MAX);
-        encode_motor_cmd(cmd.right_leg.calf,  &data[28], DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_KP_MAX, DM4340_KD_MAX);
-        encode_motor_cmd(cmd.right_leg.knee,  &data[32], DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_KP_MAX, DM4340_KD_MAX);
-        encode_motor_cmd(cmd.right_leg.ankle, &data[36], DM8006_POS_MAX, DM8006_VEL_MAX, DM8006_KP_MAX, DM8006_KD_MAX);
+        // ç¼–ç å³è…¿ (5ä¸ªç”µæœº, æ¯ä¸ª4å‚æ•°)
+        encode_leg_cmd(cmd.right_leg, data, idx);
     }
-
+    
     /**
-     * @brief ½âÂëµ¥¸öµç»ú·´À¡ (4 words)
-     * ²¼¾Ö: [position, velocity, torque, temperature]
+     * @brief è§£ç SPIæ¥æ”¶ç¼“å†²åŒºåˆ°æœºå™¨äººåé¦ˆæ•°æ®
+     * @param rx_buffer SPIæ¥æ”¶ç¼“å†²åŒº
+     * @param feedback æœºå™¨äººåé¦ˆæ•°æ®
      */
-    static void decode_motor_fb(const uint16_t* buf, MotorFeedback& fb,
-                                 float pos_max, float vel_max, float torque_max) {
-        fb.position    = decode_float_symmetric(buf[0], pos_max);
-        fb.velocity    = decode_float_symmetric(buf[1], vel_max);
-        fb.torque      = decode_float_symmetric(buf[2], torque_max);
-        fb.temperature = decode_float_range(buf[3], 0, 100);
-    }
-
-    /**
-     * @brief ½âÂëIMU·´À¡ (10 words)
-     * ²¼¾Ö: [accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, 
-     *        euler_x, euler_y, euler_z, temperature]
-     */
-    static void decode_imu_fb(const uint16_t* buf, IMUFeedback& fb) {
-        fb.accel[0] = decode_float_symmetric(buf[0], IMU_ACCEL_MAX);
-        fb.accel[1] = decode_float_symmetric(buf[1], IMU_ACCEL_MAX);
-        fb.accel[2] = decode_float_symmetric(buf[2], IMU_ACCEL_MAX);
-        fb.gyro[0]  = decode_float_symmetric(buf[3], IMU_GYRO_MAX);
-        fb.gyro[1]  = decode_float_symmetric(buf[4], IMU_GYRO_MAX);
-        fb.gyro[2]  = decode_float_symmetric(buf[5], IMU_GYRO_MAX);
-        fb.euler[0] = decode_float_symmetric(buf[6], IMU_EULER_MAX);
-        fb.euler[1] = decode_float_symmetric(buf[7], IMU_EULER_MAX);
-        fb.euler[2] = decode_float_symmetric(buf[8], IMU_EULER_MAX);
-        fb.temperature = decode_float_range(buf[9], 0, 100);
-    }
-
-    /**
-     * @brief ½âÂëÍêÕû»úÆ÷ÈË·´À¡ (60 words)
-     * ²¼¾Ö:
-     *   ×óÍÈ: [hip 0-3] [thigh 4-7] [calf 8-11] [knee 12-15] [ankle 16-19]
-     *   ÓÒÍÈ: [hip 20-23] [thigh 24-27] [calf 28-31] [knee 32-35] [ankle 36-39]
-     *   IMU0: [40-49]
-     *   IMU1: [50-59]
-     */
-    static void decode_robot_fb(const SPIRxBuffer& buf, RobotFeedback& fb) {
-        const uint16_t* data = buf.data;
+    static void decode_robot_feedback(const SPIRxBuffer& rx_buffer, RobotFeedback& feedback) {
+        const uint16_t* data = rx_buffer.data;
+        size_t idx = 0;
         
-        // ×óÍÈ (Ë÷Òı 0-19)
-        decode_motor_fb(&data[0],  fb.left_leg.hip,   DM6006_POS_MAX, DM6006_VEL_MAX, DM6006_TORQUE_MAX);
-        decode_motor_fb(&data[4],  fb.left_leg.thigh, DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_TORQUE_MAX);
-        decode_motor_fb(&data[8],  fb.left_leg.calf,  DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_TORQUE_MAX);
-        decode_motor_fb(&data[12], fb.left_leg.knee,  DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_TORQUE_MAX);
-        decode_motor_fb(&data[16], fb.left_leg.ankle, DM8006_POS_MAX, DM8006_VEL_MAX, DM8006_TORQUE_MAX);
+        // è§£ç å·¦è…¿åé¦ˆ (20 words)
+        decode_leg_feedback(data, idx, feedback.left_leg);
         
-        // ÓÒÍÈ (Ë÷Òı 20-39)
-        decode_motor_fb(&data[20], fb.right_leg.hip,   DM6006_POS_MAX, DM6006_VEL_MAX, DM6006_TORQUE_MAX);
-        decode_motor_fb(&data[24], fb.right_leg.thigh, DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_TORQUE_MAX);
-        decode_motor_fb(&data[28], fb.right_leg.calf,  DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_TORQUE_MAX);
-        decode_motor_fb(&data[32], fb.right_leg.knee,  DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_TORQUE_MAX);
-        decode_motor_fb(&data[36], fb.right_leg.ankle, DM8006_POS_MAX, DM8006_VEL_MAX, DM8006_TORQUE_MAX);
+        // è§£ç å³è…¿åé¦ˆ (20 words)
+        decode_leg_feedback(data, idx, feedback.right_leg);
         
-        // IMU (Ë÷Òı 40-59)
-        decode_imu_fb(&data[40], fb.imu[0]);
-        decode_imu_fb(&data[50], fb.imu[1]);
+        // è§£ç IMU0 (10 words)
+        decode_imu_feedback(data, idx, feedback.imu[0]);
         
-        fb.timestamp_us = get_time_us();
+        // è§£ç IMU1 (10 words)
+        decode_imu_feedback(data, idx, feedback.imu[1]);
+        
+        feedback.timestamp_us = get_time_us();
     }
-
+    
+private:
     /**
-     * @brief µ÷ÊÔ´òÓ¡»úÆ÷ÈËÖ¸Áî
+     * @brief ç¼–ç å•è…¿æ§åˆ¶æŒ‡ä»¤
      */
-    static void print_robot_cmd(const RobotCommand& cmd) {
-        LOG_DEBUG("=== Robot Command ===");
-        LOG_DEBUG("Left  Hip  : pos=%7.3f vel=%7.3f kp=%6.1f kd=%5.2f",
-                  cmd.left_leg.hip.position, cmd.left_leg.hip.velocity,
-                  cmd.left_leg.hip.kp, cmd.left_leg.hip.kd);
-        LOG_DEBUG("Left  Thigh: pos=%7.3f vel=%7.3f kp=%6.1f kd=%5.2f",
-                  cmd.left_leg.thigh.position, cmd.left_leg.thigh.velocity,
-                  cmd.left_leg.thigh.kp, cmd.left_leg.thigh.kd);
-        LOG_DEBUG("Left  Calf : pos=%7.3f vel=%7.3f kp=%6.1f kd=%5.2f",
-                  cmd.left_leg.calf.position, cmd.left_leg.calf.velocity,
-                  cmd.left_leg.calf.kp, cmd.left_leg.calf.kd);
-        LOG_DEBUG("Left  Knee : pos=%7.3f vel=%7.3f kp=%6.1f kd=%5.2f",
-                  cmd.left_leg.knee.position, cmd.left_leg.knee.velocity,
-                  cmd.left_leg.knee.kp, cmd.left_leg.knee.kd);
-        LOG_DEBUG("Left  Ankle: pos=%7.3f vel=%7.3f kp=%6.1f kd=%5.2f",
-                  cmd.left_leg.ankle.position, cmd.left_leg.ankle.velocity,
-                  cmd.left_leg.ankle.kp, cmd.left_leg.ankle.kd);
+    static void encode_leg_cmd(const LegCommand& leg, uint16_t* data, size_t& idx) {
+        // é«‹å…³èŠ‚ DM6006
+        encode_motor_cmd(leg.hip, data, idx, DM6006_POS_MAX, DM6006_VEL_MAX, 
+                        DM6006_KP_MAX, DM6006_KD_MAX);
+        // å¤§è…¿ DM4340
+        encode_motor_cmd(leg.thigh, data, idx, DM4340_POS_MAX, DM4340_VEL_MAX,
+                        DM4340_KP_MAX, DM4340_KD_MAX);
+        // å°è…¿ DM4340
+        encode_motor_cmd(leg.calf, data, idx, DM4340_POS_MAX, DM4340_VEL_MAX,
+                        DM4340_KP_MAX, DM4340_KD_MAX);
+        // è†å…³èŠ‚ DM4340
+        encode_motor_cmd(leg.knee, data, idx, DM4340_POS_MAX, DM4340_VEL_MAX,
+                        DM4340_KP_MAX, DM4340_KD_MAX);
+        // è¸å…³èŠ‚ DM8006
+        encode_motor_cmd(leg.ankle, data, idx, DM8006_POS_MAX, DM8006_VEL_MAX,
+                        DM8006_KP_MAX, DM8006_KD_MAX);
     }
-
+    
     /**
-     * @brief µ÷ÊÔ´òÓ¡»úÆ÷ÈË·´À¡
+     * @brief ç¼–ç å•ä¸ªç”µæœºæ§åˆ¶æŒ‡ä»¤
      */
-    static void print_robot_fb(const RobotFeedback& fb) {
-        LOG_DEBUG("=== Robot Feedback ===");
-        LOG_DEBUG("Left  Hip  : pos=%7.3f vel=%7.3f torque=%6.2f temp=%5.1f",
-                  fb.left_leg.hip.position, fb.left_leg.hip.velocity,
-                  fb.left_leg.hip.torque, fb.left_leg.hip.temperature);
-        LOG_DEBUG("Left  Ankle: pos=%7.3f vel=%7.3f torque=%6.2f temp=%5.1f",
-                  fb.left_leg.ankle.position, fb.left_leg.ankle.velocity,
-                  fb.left_leg.ankle.torque, fb.left_leg.ankle.temperature);
-        LOG_DEBUG("IMU0: accel=[%6.2f,%6.2f,%6.2f] gyro=[%7.1f,%7.1f,%7.1f]",
-                  fb.imu[0].accel[0], fb.imu[0].accel[1], fb.imu[0].accel[2],
-                  fb.imu[0].gyro[0], fb.imu[0].gyro[1], fb.imu[0].gyro[2]);
-        LOG_DEBUG("IMU0: euler=[%6.1f,%6.1f,%6.1f] temp=%5.1f",
-                  fb.imu[0].euler[0], fb.imu[0].euler[1], fb.imu[0].euler[2],
-                  fb.imu[0].temperature);
+    static void encode_motor_cmd(const MotorCommand& cmd, uint16_t* data, size_t& idx,
+                                 float pos_max, float vel_max, float kp_max, float kd_max) {
+        data[idx++] = encode_symmetric(cmd.position, pos_max);
+        data[idx++] = encode_symmetric(cmd.velocity, vel_max);
+        data[idx++] = encode_unsigned(cmd.kp, kp_max);
+        data[idx++] = encode_unsigned(cmd.kd, kd_max);
+    }
+    
+    /**
+     * @brief è§£ç å•è…¿åé¦ˆæ•°æ®
+     */
+    static void decode_leg_feedback(const uint16_t* data, size_t& idx, LegFeedback& leg) {
+        // é«‹å…³èŠ‚ DM6006
+        decode_motor_feedback(data, idx, leg.hip, DM6006_POS_MAX, DM6006_VEL_MAX, 
+                             DM6006_TORQUE_MAX);
+        // å¤§è…¿ DM4340
+        decode_motor_feedback(data, idx, leg.thigh, DM4340_POS_MAX, DM4340_VEL_MAX,
+                             DM4340_TORQUE_MAX);
+        // å°è…¿ DM4340
+        decode_motor_feedback(data, idx, leg.calf, DM4340_POS_MAX, DM4340_VEL_MAX,
+                             DM4340_TORQUE_MAX);
+        // è†å…³èŠ‚ DM4340
+        decode_motor_feedback(data, idx, leg.knee, DM4340_POS_MAX, DM4340_VEL_MAX,
+                             DM4340_TORQUE_MAX);
+        // è¸å…³èŠ‚ DM8006
+        decode_motor_feedback(data, idx, leg.ankle, DM8006_POS_MAX, DM8006_VEL_MAX,
+                             DM8006_TORQUE_MAX);
+    }
+    
+    /**
+     * @brief è§£ç å•ä¸ªç”µæœºåé¦ˆæ•°æ®
+     */
+    static void decode_motor_feedback(const uint16_t* data, size_t& idx, MotorFeedback& motor,
+                                      float pos_max, float vel_max, float torque_max) {
+        motor.position = decode_symmetric(data[idx++], pos_max);
+        motor.velocity = decode_symmetric(data[idx++], vel_max);
+        motor.torque = decode_symmetric(data[idx++], torque_max);
+        motor.temperature = decode_unsigned(data[idx++], 100.0f);  // æ¸©åº¦0-100åº¦
+    }
+    
+    /**
+     * @brief è§£ç IMUåé¦ˆæ•°æ®
+     */
+    static void decode_imu_feedback(const uint16_t* data, size_t& idx, IMUFeedback& imu) {
+        // åŠ é€Ÿåº¦ (m/s^2, èŒƒå›´+-16g)
+        imu.accel[0] = decode_symmetric(data[idx++], 16.0f * 9.81f);
+        imu.accel[1] = decode_symmetric(data[idx++], 16.0f * 9.81f);
+        imu.accel[2] = decode_symmetric(data[idx++], 16.0f * 9.81f);
+        
+        // è§’é€Ÿåº¦ (deg/s, èŒƒå›´+-2000)
+        imu.gyro[0] = decode_symmetric(data[idx++], 2000.0f);
+        imu.gyro[1] = decode_symmetric(data[idx++], 2000.0f);
+        imu.gyro[2] = decode_symmetric(data[idx++], 2000.0f);
+        
+        // æ¬§æ‹‰è§’ (åº¦, roll/pitch +-180, yaw +-180)
+        imu.euler[0] = decode_symmetric(data[idx++], 180.0f);
+        imu.euler[1] = decode_symmetric(data[idx++], 180.0f);
+        imu.euler[2] = decode_symmetric(data[idx++], 180.0f);
+        
+        // æ¸©åº¦ (0-100åº¦)
+        imu.temperature = decode_unsigned(data[idx++], 100.0f);
     }
 };
 

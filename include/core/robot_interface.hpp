@@ -1,6 +1,6 @@
-﻿/**
+/**
  * @file robot_interface.hpp
- * @brief 机器人接口主类
+ * @brief 机器人接口类 - 整合所有功能的顶层接口
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -8,231 +8,196 @@
 #ifndef ODROID_CORE_ROBOT_INTERFACE_HPP
 #define ODROID_CORE_ROBOT_INTERFACE_HPP
 
-#include <memory>
-#include <atomic>
-#include <functional>
-
 #include "common/types.hpp"
 #include "common/constants.hpp"
 #include "common/logger.hpp"
-#include "common/time_utils.hpp"
-#include "realtime/rt_thread.hpp"
-#include "realtime/rt_utils.hpp"
 #include "communication/spi_driver.hpp"
 #include "communication/protocol.hpp"
+#include "realtime/rt_thread.hpp"
 #include "core/data_hub.hpp"
 
 namespace odroid {
 
 /**
- * @brief SPI通信线程任务
- */
-class SPICommTask {
-public:
-    SPICommTask() : initialized_(false), comm_count_(0), error_count_(0) {}
-
-    /**
-     * @brief 初始化
-     */
-    bool init(const SPIConfig& config = SPIConfig()) {
-        if (!spi_.open(config)) {
-            return false;
-        }
-        initialized_ = true;
-        return true;
-    }
-
-    /**
-     * @brief 执行一次SPI通信
-     */
-    void execute() {
-        if (!initialized_) return;
-
-        // 获取控制指令
-        RobotCommand cmd;
-        DataHub::instance().get_command(cmd);
-
-        // 编码发送数据
-        SPITxBuffer tx_buf;
-        Protocol::encode_robot_cmd(cmd, tx_buf);
-
-        // SPI传输
-        SPIRxBuffer rx_buf;
-        if (spi_.transfer(tx_buf, rx_buf)) {
-            // 解码反馈数据
-            RobotFeedback fb;
-            Protocol::decode_robot_fb(rx_buf, fb);
-            fb.timestamp_us = get_time_us();
-
-            // 更新数据中心
-            DataHub::instance().set_feedback(fb);
-            comm_count_++;
-        } else {
-            error_count_++;
-        }
-    }
-
-    /**
-     * @brief 关闭
-     */
-    void close() {
-        spi_.close();
-        initialized_ = false;
-    }
-
-    uint64_t get_comm_count() const { return comm_count_; }
-    uint64_t get_error_count() const { return error_count_; }
-
-private:
-    SPIDriver spi_;
-    bool initialized_;
-    uint64_t comm_count_;
-    uint64_t error_count_;
-};
-
-/**
- * @brief 机器人接口主类
- *
- * 负责:
- * - 初始化SPI通信
- * - 启动实时线程
- * - 提供控制接口
+ * @brief 机器人接口类 - 提供高层API
  */
 class RobotInterface {
 public:
-    using FeedbackCallback = std::function<void(const RobotFeedback&)>;
-
-    RobotInterface() : running_(false), callback_(nullptr) {}
-
-    ~RobotInterface() {
-        stop();
-    }
-
+    RobotInterface() = default;
+    ~RobotInterface() { stop(); }
+    
+    // 禁止拷贝
+    RobotInterface(const RobotInterface&) = delete;
+    RobotInterface& operator=(const RobotInterface&) = delete;
+    
     /**
      * @brief 初始化机器人接口
+     * @param config SPI配置
+     * @return 成功返回true
      */
-    bool init(const SPIConfig& spi_config = SPIConfig()) {
-        if (!spi_task_.init(spi_config)) {
-            LOG_ERROR("Failed to init SPI");
+    bool init(const SPIConfig& config = SPIConfig{}) {
+        LOG_INFO("初始化机器人接口...");
+        
+        // 初始化SPI驱动
+        if (!spi_driver_.init(config)) {
+            LOG_ERROR("SPI驱动初始化失败");
             return false;
         }
-
-        LOG_INFO("RobotInterface initialized");
+        
+        initialized_ = true;
+        LOG_INFO("机器人接口初始化成功");
         return true;
     }
-
+    
     /**
-     * @brief 启动实时控制线程
+     * @brief 启动通信线程
+     * @param period_us 通信周期 (微秒)
+     * @return 成功返回true
      */
-    bool start() {
-        if (running_) {
-            LOG_WARN("Already running");
-            return true;
+    bool start(uint64_t period_us = CONTROL_PERIOD_US) {
+        if (!initialized_) {
+            LOG_ERROR("接口未初始化");
+            return false;
         }
-
-        running_ = true;
-
-        // 创建SPI线程 (name, period_us, priority, cpu_core)
-        spi_thread_ = std::make_unique<RTThread>(
-            "spi_thread",
-            SPI_PERIOD_US,
+        
+        if (running_) {
+            LOG_WARN("通信线程已在运行");
+            return false;
+        }
+        
+        // 启动SPI通信线程
+        running_ = spi_thread_.start(
+            [this]() { this->spi_loop(); },
+            period_us,
             RT_PRIORITY_SPI,
             CPU_CORE_SPI
         );
-
-        spi_thread_->set_loop_task([this]() {
-            this->spi_loop();
-        });
-
-        if (!spi_thread_->start()) {
-            LOG_ERROR("Failed to start SPI thread");
-            running_ = false;
-            return false;
+        
+        if (running_) {
+            LOG_INFO("通信线程已启动, 周期=%lu us", period_us);
         }
-
-        LOG_INFO("RobotInterface started");
-        return true;
-    }
-
-    /**
-     * @brief 停止
-     */
-    void stop() {
-        if (!running_) return;
-
-        running_ = false;
-
-        if (spi_thread_) {
-            spi_thread_->stop();
-            spi_thread_.reset();
-        }
-
-        spi_task_.close();
-        LOG_INFO("RobotInterface stopped");
-    }
-
-    /**
-     * @brief 设置控制指令
-     */
-    void set_command(const RobotCommand& cmd) {
-        DataHub::instance().set_command(cmd);
-    }
-
-    /**
-     * @brief 获取反馈数据
-     */
-    bool get_feedback(RobotFeedback& fb) const {
-        return DataHub::instance().get_feedback(fb);
-    }
-
-    /**
-     * @brief 设置反馈回调
-     */
-    void set_feedback_callback(FeedbackCallback cb) {
-        callback_ = cb;
-    }
-
-    /**
-     * @brief 是否正在运行
-     */
-    bool is_running() const {
+        
         return running_;
     }
-
+    
     /**
-     * @brief 打印统计信息
+     * @brief 停止通信线程
      */
-    void print_stats() const {
-        LOG_INFO("SPI Stats: comm=%lu, errors=%lu",
-                 (unsigned long)spi_task_.get_comm_count(),
-                 (unsigned long)spi_task_.get_error_count());
-        if (spi_thread_) {
-            LOG_INFO("Thread Stats: loops=%lu, missed=%lu",
-                     (unsigned long)spi_thread_->get_loop_count(),
-                     (unsigned long)spi_thread_->get_missed_deadlines());
+    void stop() {
+        if (running_) {
+            spi_thread_.stop();
+            running_ = false;
+            LOG_INFO("通信线程已停止");
         }
+        spi_driver_.close();
     }
-
+    
+    //==========================================================================
+    // 高层控制接口
+    //==========================================================================
+    
+    /**
+     * @brief 发送机器人控制指令
+     * @param cmd 控制指令
+     */
+    void send_command(const RobotCommand& cmd) {
+        DataHub::instance().set_command(cmd);
+    }
+    
+    /**
+     * @brief 获取机器人反馈数据
+     * @param feedback 反馈数据
+     * @return 有有效数据返回true
+     */
+    bool get_feedback(RobotFeedback& feedback) {
+        return DataHub::instance().get_feedback(feedback);
+    }
+    
+    /**
+     * @brief 发送单腿控制指令
+     * @param leg 腿编号 (0=左腿, 1=右腿)
+     * @param cmd 腿控制指令
+     */
+    void send_leg_command(int leg, const LegCommand& cmd) {
+        RobotCommand robot_cmd;
+        if (DataHub::instance().get_command(robot_cmd)) {
+            // 基于当前指令更新
+        }
+        
+        if (leg == 0) {
+            robot_cmd.left_leg = cmd;
+        } else {
+            robot_cmd.right_leg = cmd;
+        }
+        robot_cmd.timestamp_us = get_time_us();
+        
+        DataHub::instance().set_command(robot_cmd);
+    }
+    
+    //==========================================================================
+    // 状态查询接口
+    //==========================================================================
+    
+    /**
+     * @brief 检查是否已初始化
+     */
+    bool is_initialized() const { return initialized_; }
+    
+    /**
+     * @brief 检查通信线程是否在运行
+     */
+    bool is_running() const { return running_; }
+    
+    /**
+     * @brief 获取通信统计信息
+     */
+    uint64_t get_transfer_count() const {
+        return DataHub::instance().get_transfer_count();
+    }
+    
+    uint64_t get_cycle_count() const {
+        return spi_thread_.get_cycle_count();
+    }
+    
+    double get_avg_latency_us() const {
+        return spi_thread_.get_avg_latency_us();
+    }
+    
+    uint64_t get_max_latency_us() const {
+        return spi_thread_.get_max_latency_us();
+    }
+    
 private:
     /**
-     * @brief SPI通信循环
+     * @brief SPI通信循环 (在实时线程中执行)
      */
     void spi_loop() {
-        spi_task_.execute();
-
-        // 调用回调
-        if (callback_) {
-            RobotFeedback fb;
-            if (DataHub::instance().get_feedback(fb)) {
-                callback_(fb);
-            }
+        auto& hub = DataHub::instance();
+        
+        // 获取最新控制指令并编码
+        RobotCommand cmd;
+        if (hub.get_command(cmd)) {
+            Protocol::encode_robot_cmd(cmd, hub.get_tx_buffer());
+        }
+        
+        // 执行SPI传输
+        if (spi_driver_.transfer(hub.get_tx_buffer(), hub.get_rx_buffer())) {
+            // 解码反馈数据
+            RobotFeedback feedback;
+            Protocol::decode_robot_feedback(hub.get_rx_buffer(), feedback);
+            hub.update_feedback(feedback);
+            
+            hub.increment_transfer_count();
+            hub.set_communication_ok(true);
+        } else {
+            hub.set_communication_ok(false);
         }
     }
-
-    std::atomic<bool> running_;
-    SPICommTask spi_task_;
-    std::unique_ptr<RTThread> spi_thread_;
-    FeedbackCallback callback_;
+    
+    SPIDriver spi_driver_;
+    RTThread spi_thread_;
+    bool initialized_ = false;
+    bool running_ = false;
 };
 
 } // namespace odroid

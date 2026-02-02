@@ -1,6 +1,6 @@
 /**
  * @file spi_driver.hpp
- * @brief Linux SPIÖ÷»úÇı¶¯
+ * @brief SPIé©±åŠ¨å±‚ - åŸºäºLinux spidev
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -10,9 +10,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <string>
-#include <cerrno>
-
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -25,180 +22,137 @@
 namespace odroid {
 
 /**
- * @brief SPIÇı¶¯ÅäÖÃ
- */
-struct SPIConfig {
-    std::string device = SPI_DEVICE_DEFAULT;
-    uint32_t speed_hz = SPI_SPEED_HZ;
-    uint8_t bits_per_word = SPI_BITS_PER_WORD;
-    uint8_t mode = SPI_MODE_0;
-    bool lsb_first = false;  // STM32Ê¹ÓÃMSB first
-};
-
-/**
- * @brief SPIÇı¶¯Àà
+ * @brief SPIé©±åŠ¨ç±» - 16ä½ä¸»æœºæ¨¡å¼
  */
 class SPIDriver {
 public:
-    SPIDriver() : fd_(-1), is_open_(false), transfer_count_(0), transfer_errors_(0) {}
-
-    ~SPIDriver() {
-        close();
-    }
-
-    // ½ûÖ¹¿½±´
+    SPIDriver() = default;
+    ~SPIDriver() { close(); }
+    
+    // ç¦æ­¢æ‹·è´
     SPIDriver(const SPIDriver&) = delete;
     SPIDriver& operator=(const SPIDriver&) = delete;
-
+    
     /**
-     * @brief ´ò¿ªSPIÉè±¸
-     * @param config SPIÅäÖÃ
-     * @return ÊÇ·ñ³É¹¦
+     * @brief åˆå§‹åŒ–SPIè®¾å¤‡
+     * @param config SPIé…ç½®
+     * @return æˆåŠŸè¿”å›true
      */
-    bool open(const SPIConfig& config = SPIConfig()) {
-        if (is_open_) {
-            LOG_WARN("SPI device already open");
-            return true;
-        }
-
+    bool init(const SPIConfig& config = SPIConfig{}) {
         config_ = config;
-
-        // ´ò¿ªÉè±¸
-        fd_ = ::open(config_.device.c_str(), O_RDWR);
+        
+        // æ‰“å¼€SPIè®¾å¤‡
+        fd_ = ::open(config_.device, O_RDWR);
         if (fd_ < 0) {
-            LOG_ERROR("Failed to open SPI device %s: %s",
-                     config_.device.c_str(), strerror(errno));
+            LOG_ERROR("æ— æ³•æ‰“å¼€SPIè®¾å¤‡: %s", config_.device);
             return false;
         }
-
-        // ÉèÖÃSPIÄ£Ê½
-        if (ioctl(fd_, SPI_IOC_WR_MODE, &config_.mode) < 0) {
-            LOG_ERROR("Failed to set SPI mode: %s", strerror(errno));
+        
+        // é…ç½®SPIæ¨¡å¼
+        uint8_t mode = config_.mode;
+        if (ioctl(fd_, SPI_IOC_WR_MODE, &mode) < 0) {
+            LOG_ERROR("è®¾ç½®SPIæ¨¡å¼å¤±è´¥");
             ::close(fd_);
             fd_ = -1;
             return false;
         }
-
-        // ÉèÖÃÎ»¿í
-        if (ioctl(fd_, SPI_IOC_WR_BITS_PER_WORD, &config_.bits_per_word) < 0) {
-            LOG_ERROR("Failed to set SPI bits per word: %s", strerror(errno));
+        
+        // é…ç½®ä½å®½
+        uint8_t bits = config_.bits_per_word;
+        if (ioctl(fd_, SPI_IOC_WR_BITS_PER_WORD, &bits) < 0) {
+            LOG_ERROR("è®¾ç½®SPIä½å®½å¤±è´¥");
             ::close(fd_);
             fd_ = -1;
             return false;
         }
-
-        // ÉèÖÃËÙ¶È
-        if (ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &config_.speed_hz) < 0) {
-            LOG_ERROR("Failed to set SPI speed: %s", strerror(errno));
+        
+        // é…ç½®é€Ÿåº¦
+        uint32_t speed = config_.speed_hz;
+        if (ioctl(fd_, SPI_IOC_WR_MAX_SPEED_HZ, &speed) < 0) {
+            LOG_ERROR("è®¾ç½®SPIé€Ÿåº¦å¤±è´¥");
             ::close(fd_);
             fd_ = -1;
             return false;
         }
-
-        // ÉèÖÃLSB/MSB
-        uint8_t lsb = config_.lsb_first ? 1 : 0;
-        if (ioctl(fd_, SPI_IOC_WR_LSB_FIRST, &lsb) < 0) {
-            LOG_WARN("Failed to set SPI LSB first: %s", strerror(errno));
-            // ·ÇÖÂÃü´íÎó£¬¼ÌĞø
-        }
-
+        
         is_open_ = true;
-        LOG_INFO("SPI device %s opened: mode=%d, bits=%d, speed=%u Hz",
-                config_.device.c_str(), config_.mode,
-                config_.bits_per_word, config_.speed_hz);
-
+        LOG_INFO("SPIåˆå§‹åŒ–æˆåŠŸ: %s, %d Hz, %d bits", 
+                 config_.device, config_.speed_hz, config_.bits_per_word);
         return true;
     }
-
+    
     /**
-     * @brief ¹Ø±ÕSPIÉè±¸
+     * @brief å…³é—­SPIè®¾å¤‡
      */
     void close() {
         if (fd_ >= 0) {
             ::close(fd_);
             fd_ = -1;
             is_open_ = false;
-            LOG_INFO("SPI device closed");
+            LOG_INFO("SPIè®¾å¤‡å·²å…³é—­");
         }
     }
-
+    
     /**
-     * @brief ¼ì²éÉè±¸ÊÇ·ñ´ò¿ª
+     * @brief å…¨åŒå·¥SPIä¼ è¾“
+     * @param tx_buffer å‘é€ç¼“å†²åŒº
+     * @param rx_buffer æ¥æ”¶ç¼“å†²åŒº
+     * @return æˆåŠŸè¿”å›true
      */
-    bool is_open() const { return is_open_; }
-
-    /**
-     * @brief È«Ë«¹¤´«Êä (16Î»Ä£Ê½)
-     * @param tx_buf ·¢ËÍ»º³åÇø (uint16_tÊı×é)
-     * @param rx_buf ½ÓÊÕ»º³åÇø (uint16_tÊı×é)
-     * @param len ´«ÊäµÄuint16_tÊıÁ¿
-     * @return ÊÇ·ñ³É¹¦
-     */
-    bool transfer_16bit(const uint16_t* tx_buf, uint16_t* rx_buf, size_t len) {
+    bool transfer(const SPITxBuffer& tx_buffer, SPIRxBuffer& rx_buffer) {
         if (!is_open_) {
-            LOG_ERROR("SPI device not open");
+            LOG_ERROR("SPIè®¾å¤‡æœªæ‰“å¼€");
             return false;
         }
-
-        struct spi_ioc_transfer tr;
-        memset(&tr, 0, sizeof(tr));
-
+        
+        // å‡†å¤‡ä¼ è¾“ç»“æ„
+        // æ³¨æ„: æˆ‘ä»¬éœ€è¦å‘é€çš„æ•°æ®é‡å–æœ€å¤§å€¼
+        constexpr size_t tx_bytes = SPI_TX_WORDS * 2;
+        constexpr size_t rx_bytes = SPI_RX_WORDS * 2;
+        constexpr size_t max_bytes = (tx_bytes > rx_bytes) ? tx_bytes : rx_bytes;
+        
+        // ä½¿ç”¨æ›´å¤§çš„ç¼“å†²åŒºè¿›è¡Œä¼ è¾“
+        uint8_t tx_buf[max_bytes] = {0};
+        uint8_t rx_buf[max_bytes] = {0};
+        
+        // å¤åˆ¶å‘é€æ•°æ®
+        std::memcpy(tx_buf, tx_buffer.data, tx_bytes);
+        
+        struct spi_ioc_transfer tr = {};
         tr.tx_buf = reinterpret_cast<unsigned long>(tx_buf);
         tr.rx_buf = reinterpret_cast<unsigned long>(rx_buf);
-        tr.len = len * 2;  // ×Ö½ÚÊı
+        tr.len = max_bytes;
         tr.speed_hz = config_.speed_hz;
         tr.bits_per_word = config_.bits_per_word;
         tr.delay_usecs = 0;
-
-        int ret = ioctl(fd_, SPI_IOC_MESSAGE(1), &tr);
-        if (ret < 0) {
-            LOG_ERROR("SPI transfer failed: %s", strerror(errno));
-            transfer_errors_++;
+        
+        if (ioctl(fd_, SPI_IOC_MESSAGE(1), &tr) < 0) {
+            LOG_ERROR("SPIä¼ è¾“å¤±è´¥");
             return false;
         }
-
+        
+        // å¤åˆ¶æ¥æ”¶æ•°æ®
+        std::memcpy(rx_buffer.data, rx_buf, rx_bytes);
+        
         transfer_count_++;
         return true;
     }
-
+    
     /**
-     * @brief È«Ë«¹¤´«Êä (Ê¹ÓÃSPIBuffer)
-     * @param tx_buf ·¢ËÍ»º³åÇø (40 words)
-     * @param rx_buf ½ÓÊÕ»º³åÇø (60 words)
-     * @return ÊÇ·ñ³É¹¦
-     */
-    bool transfer(const SPITxBuffer& tx_buf, SPIRxBuffer& rx_buf) {
-        // TX±ÈRXĞ¡£¬ĞèÒªÀ©Õ¹TX»º³åÇø
-        static_assert(SPI_RX_WORDS >= SPI_TX_WORDS, "RX buffer must be >= TX buffer");
-
-        // À©Õ¹TX»º³åÇøµ½RX´óĞ¡
-        uint16_t tx_extended[SPI_RX_WORDS] = {0};
-        memcpy(tx_extended, tx_buf.data, sizeof(tx_buf.data));
-
-        return transfer_16bit(tx_extended, rx_buf.data, SPI_RX_WORDS);
-    }
-
-    /**
-     * @brief »ñÈ¡´«ÊäÍ³¼Æ
+     * @brief è·å–ä¼ è¾“è®¡æ•°
      */
     uint64_t get_transfer_count() const { return transfer_count_; }
-    uint64_t get_transfer_errors() const { return transfer_errors_; }
-
+    
     /**
-     * @brief ÖØÖÃÍ³¼Æ
+     * @brief æ£€æŸ¥è®¾å¤‡æ˜¯å¦å·²æ‰“å¼€
      */
-    void reset_stats() {
-        transfer_count_ = 0;
-        transfer_errors_ = 0;
-    }
-
+    bool is_open() const { return is_open_; }
+    
 private:
-    int fd_;
-    bool is_open_;
+    int fd_ = -1;
+    bool is_open_ = false;
     SPIConfig config_;
-
-    uint64_t transfer_count_;
-    uint64_t transfer_errors_;
+    uint64_t transfer_count_ = 0;
 };
 
 } // namespace odroid
