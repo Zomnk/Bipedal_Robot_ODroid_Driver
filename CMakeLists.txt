@@ -68,6 +68,10 @@ target_link_libraries(test_motor_control robot_driver_lib)
 add_executable(test_rt_timing tests/test_rt_timing.cpp)
 target_link_libraries(test_rt_timing robot_driver_lib)
 
+# 测试程序 - Jetson通信测试
+add_executable(test_jetson_comm tests/test_jetson_comm.cpp)
+target_link_libraries(test_jetson_comm robot_driver_lib)
+
 # 安装
 install(TARGETS robot_driver DESTINATION bin)
 install(DIRECTORY scripts/ DESTINATION bin

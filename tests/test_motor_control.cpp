@@ -26,9 +26,9 @@ void signal_handler(int sig) {
     g_running = false;
 }
 
-// 打印左腿电机反馈信息
-void print_left_leg_feedback(const LegFeedback& leg) {
-    LOG_INFO("--- 左腿电机反馈 ---");
+// 打印腿部电机反馈信息
+void print_leg_feedback(const LegFeedback& leg, const char* leg_name) {
+    LOG_INFO("--- %s电机反馈 ---", leg_name);
     LOG_INFO("  Yaw:   pos=%+7.3f rad, vel=%+7.3f rad/s, torque=%+6.3f Nm, temp=%.1f C",
              leg.yaw.position, leg.yaw.velocity, leg.yaw.torque, leg.yaw.temperature);
     LOG_INFO("  Roll:  pos=%+7.3f rad, vel=%+7.3f rad/s, torque=%+6.3f Nm, temp=%.1f C",
@@ -53,8 +53,8 @@ void print_imu_feedback(const IMUFeedback& imu, const char* name) {
     LOG_INFO("  Temp:  %.1f C", imu.temperature);
 }
 
-// 设置左腿所有电机的控制参数
-void set_left_leg_command(LegCommand& leg, float position, float velocity, float kp, float kd) {
+// 设置腿部所有电机的控制参数
+void set_leg_command(LegCommand& leg, float position, float velocity, float kp, float kd) {
     // Yaw - DM6006
     leg.yaw.position = position;
     leg.yaw.velocity = velocity;
@@ -93,9 +93,10 @@ int main() {
     
     Logger::instance().set_level(LogLevel::INFO);
 
-    LOG_INFO("=== 左腿电机控制测试 ===");
+    LOG_INFO("=== 双腿电机控制测试 ===");
     LOG_INFO("测试参数: vel=0, kp=1, kd=0.4");
     LOG_INFO("位置目标: 正弦函数, 幅值=PI, 周期=4秒");
+    LOG_INFO("控制范围: 左腿 + 右腿 (共10个电机)");
     LOG_INFO("按 Ctrl+C 退出测试");
     LOG_INFO("");
 
@@ -135,9 +136,10 @@ int main() {
         float elapsed_s = (now - start_time) / 1000000.0f;
         float target_position = amplitude * std::sin(omega * elapsed_s);
 
-        // 发送左腿控制指令
+        // 发送双腿控制指令 (左右腿使用相同参数)
         RobotCommand cmd{};
-        set_left_leg_command(cmd.left_leg, target_position, velocity, kp, kd);
+        set_leg_command(cmd.left_leg, target_position, velocity, kp, kd);
+        set_leg_command(cmd.right_leg, target_position, velocity, kp, kd);
         cmd.timestamp_us = now;
         robot.send_command(cmd);
 
@@ -146,7 +148,8 @@ int main() {
             RobotFeedback feedback;
             if (robot.get_feedback(feedback)) {
                 LOG_INFO("========== 反馈数据 [目标位置: %+.2f rad] ==========", target_position);
-                print_left_leg_feedback(feedback.left_leg);
+                print_leg_feedback(feedback.left_leg, "左腿");
+                print_leg_feedback(feedback.right_leg, "右腿");
                 print_imu_feedback(feedback.imu[0], "ICM20602");
                 print_imu_feedback(feedback.imu[1], "Waveshare");
                 LOG_INFO("");
@@ -161,13 +164,14 @@ int main() {
     // 停止前发送零位置零增益指令
     LOG_INFO("发送停止指令...");
     RobotCommand stop_cmd{};
-    set_left_leg_command(stop_cmd.left_leg, 0.0f, 0.0f, 0.0f, 0.0f);
+    set_leg_command(stop_cmd.left_leg, 0.0f, 0.0f, 0.0f, 0.0f);
+    set_leg_command(stop_cmd.right_leg, 0.0f, 0.0f, 0.0f, 0.0f);
     robot.send_command(stop_cmd);
     usleep(10000);  // 等待发送完成
 
     robot.stop();
     robot.print_stats();
 
-    LOG_INFO("=== 电机控制测试结束 ===");
+    LOG_INFO("=== 双腿电机控制测试结束 ===");
     return 0;
 }
