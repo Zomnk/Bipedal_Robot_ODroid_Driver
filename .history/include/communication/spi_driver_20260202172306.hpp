@@ -102,24 +102,13 @@ public:
     }
     
     /**
-     * @brief 全双工SPI传输 (16位数据)
+     * @brief 全双工SPI传输 (16位数据，大端序传输)
      * @param tx_buffer 发送缓冲区 (控制指令, 40 words)
      * @param rx_buffer 接收缓冲区 (反馈数据, 60 words)
      * @return 成功返回true
      * 
      * @note 传输长度使用60 words (较大值)，以确保能接收完整的反馈数据
      *       STM32发送60 words，ODroid发送40 words (后20 words为0)
-     *       
-     *       字节序说明:
-     *       STM32 SPI2 配置为 16位模式 + MSB先发
-     *       当STM32发送 uint16_t 0x8000 时：
-     *         - 先发送高字节 0x80，再发送低字节 0x00
-     *       ODroid 使用 8位SPI，收到的顺序是 [0x80, 0x00]
-     *       但小端序解释这两个字节为 0x0080 (错误!)
-     *       
-     *       因此需要在传输时交换字节序:
-     *       - 发送前: 每个uint16先发高字节
-     *       - 接收后: 把收到的 [high, low] 组装为 (high << 8) | low
      */
     bool transfer(const SPITxBuffer& tx_buffer, SPIRxBuffer& rx_buffer) {
         if (!is_open_) {
@@ -131,18 +120,18 @@ public:
         constexpr size_t transfer_words = SPI_RX_WORDS;  // 60 words
         constexpr size_t transfer_bytes = transfer_words * 2;  // 120 bytes
         
-        // 准备发送/接收缓冲区
+        // 准备发送缓冲区（大端序转换）
         uint8_t tx_buf[transfer_bytes] = {0};
         uint8_t rx_buf[transfer_bytes] = {0};
         
-        // 发送时: 将每个uint16拆分为 [高字节, 低字节] (MSB first)
-        // 这与STM32 16位SPI + MSB先发的顺序匹配
-        for (size_t i = 0; i < SPI_TX_WORDS; ++i) {
+        // 将16位数据转换为大端序字节流
+        // STM32 SPI 16位模式：高字节先传输
+        for (size_t i = 0; i < SPI_TX_WORDS; i++) {
             uint16_t val = tx_buffer.data[i];
-            tx_buf[i * 2]     = (val >> 8) & 0xFF;  // 高字节先发
-            tx_buf[i * 2 + 1] = val & 0xFF;         // 低字节后发
+            tx_buf[i * 2]     = (val >> 8) & 0xFF;  // 高字节
+            tx_buf[i * 2 + 1] = val & 0xFF;         // 低字节
         }
-        // 剩余部分 (40-59 words) 保持为0
+        // 剩余部分 (40-59) 填充0，已由初始化完成
         
         struct spi_ioc_transfer tr = {};
         tr.tx_buf = reinterpret_cast<unsigned long>(tx_buf);
@@ -151,7 +140,7 @@ public:
         tr.speed_hz = config_.speed_hz;
         tr.bits_per_word = 8;
         tr.delay_usecs = 0;
-        tr.cs_change = 0;
+        tr.cs_change = 0;  // 传输完成后不改变CS状态
         
         int ret = ioctl(fd_, SPI_IOC_MESSAGE(1), &tr);
         if (ret < 0) {
@@ -159,10 +148,10 @@ public:
             return false;
         }
         
-        // 接收时: 收到的顺序是 [高字节, 低字节]，组装为 (high << 8) | low
-        for (size_t i = 0; i < SPI_RX_WORDS; ++i) {
+        // 将接收到的大端序字节流转换回16位数据
+        for (size_t i = 0; i < SPI_RX_WORDS; i++) {
             uint8_t high = rx_buf[i * 2];
-            uint8_t low  = rx_buf[i * 2 + 1];
+            uint8_t low = rx_buf[i * 2 + 1];
             rx_buffer.data[i] = (static_cast<uint16_t>(high) << 8) | low;
         }
         

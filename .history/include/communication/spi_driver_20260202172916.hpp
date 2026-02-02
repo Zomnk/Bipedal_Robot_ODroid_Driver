@@ -111,15 +111,10 @@ public:
      *       STM32发送60 words，ODroid发送40 words (后20 words为0)
      *       
      *       字节序说明:
-     *       STM32 SPI2 配置为 16位模式 + MSB先发
-     *       当STM32发送 uint16_t 0x8000 时：
-     *         - 先发送高字节 0x80，再发送低字节 0x00
-     *       ODroid 使用 8位SPI，收到的顺序是 [0x80, 0x00]
-     *       但小端序解释这两个字节为 0x0080 (错误!)
-     *       
-     *       因此需要在传输时交换字节序:
-     *       - 发送前: 每个uint16先发高字节
-     *       - 接收后: 把收到的 [high, low] 组装为 (high << 8) | low
+     *       STM32 使用 16位 SPI + DMA，ARM 小端序
+     *       uint16_t 0x1234 在内存中: [0x34, 0x12] (低字节在前)
+     *       DMA 按字节发送，所以 SPI 线上先出现 0x34，再出现 0x12
+     *       ODroid 也是小端序，直接传输 uint16_t 即可匹配
      */
     bool transfer(const SPITxBuffer& tx_buffer, SPIRxBuffer& rx_buffer) {
         if (!is_open_) {
@@ -132,16 +127,12 @@ public:
         constexpr size_t transfer_bytes = transfer_words * 2;  // 120 bytes
         
         // 准备发送/接收缓冲区
+        // 两边都是 ARM 小端序，直接使用 memcpy 即可
         uint8_t tx_buf[transfer_bytes] = {0};
         uint8_t rx_buf[transfer_bytes] = {0};
         
-        // 发送时: 将每个uint16拆分为 [高字节, 低字节] (MSB first)
-        // 这与STM32 16位SPI + MSB先发的顺序匹配
-        for (size_t i = 0; i < SPI_TX_WORDS; ++i) {
-            uint16_t val = tx_buffer.data[i];
-            tx_buf[i * 2]     = (val >> 8) & 0xFF;  // 高字节先发
-            tx_buf[i * 2 + 1] = val & 0xFF;         // 低字节后发
-        }
+        // 直接复制发送数据 (小端序匹配)
+        std::memcpy(tx_buf, tx_buffer.data, SPI_TX_WORDS * 2);
         // 剩余部分 (40-59 words) 保持为0
         
         struct spi_ioc_transfer tr = {};
@@ -159,12 +150,8 @@ public:
             return false;
         }
         
-        // 接收时: 收到的顺序是 [高字节, 低字节]，组装为 (high << 8) | low
-        for (size_t i = 0; i < SPI_RX_WORDS; ++i) {
-            uint8_t high = rx_buf[i * 2];
-            uint8_t low  = rx_buf[i * 2 + 1];
-            rx_buffer.data[i] = (static_cast<uint16_t>(high) << 8) | low;
-        }
+        // 直接复制接收数据 (小端序匹配)
+        std::memcpy(rx_buffer.data, rx_buf, SPI_RX_WORDS * 2);
         
         transfer_count_++;
         return true;
