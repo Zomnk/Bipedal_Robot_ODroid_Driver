@@ -1,6 +1,6 @@
 /**
  * @file types.hpp
- * @brief 数据类型定义
+ * @brief 数据类型定义 (与STM32 F405保持一致)
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -35,34 +35,37 @@ struct MotorFeedback {
 };
 
 /**
- * @brief 单腿控制指令 (5个关节)
+ * @brief 单腿控制指令 (5个关节，与STM32保持一致)
+ * @note 关节顺序: Yaw, Roll, Pitch, Knee, Ankle
+ *       电机型号: DM6006, DM4340, DM8006, DM6006, DM6006
  */
 struct LegCommand {
-    MotorCommand hip;     // 髋关节 (yaw)
-    MotorCommand thigh;   // 大腿 (roll)
-    MotorCommand calf;    // 小腿 (pitch)
-    MotorCommand knee;    // 膝关节
-    MotorCommand ankle;   // 踝关节
+    MotorCommand yaw;     // 髋关节Yaw (DM6006)
+    MotorCommand roll;    // 髋关节Roll (DM4340)
+    MotorCommand pitch;   // 髋关节Pitch (DM8006)
+    MotorCommand knee;    // 膝关节 (DM6006)
+    MotorCommand ankle;   // 踝关节 (DM6006)
 };
 
 /**
- * @brief 单腿反馈数据 (5个关节)
+ * @brief 单腿反馈数据 (5个关节，与STM32保持一致)
  */
 struct LegFeedback {
-    MotorFeedback hip;
-    MotorFeedback thigh;
-    MotorFeedback calf;
-    MotorFeedback knee;
-    MotorFeedback ankle;
+    MotorFeedback yaw;     // 髋关节Yaw (DM6006)
+    MotorFeedback roll;    // 髋关节Roll (DM4340)
+    MotorFeedback pitch;   // 髋关节Pitch (DM8006)
+    MotorFeedback knee;    // 膝关节 (DM6006)
+    MotorFeedback ankle;   // 踝关节 (DM6006)
 };
 
 /**
- * @brief IMU反馈数据
+ * @brief IMU反馈数据 (与STM32保持一致)
+ * @note 数据顺序: gyro3, accel3, euler3, temp
  */
 struct IMUFeedback {
-    float accel[3] = {0};     // 加速度 (m/s^2)
-    float gyro[3] = {0};      // 角速度 (deg/s)
-    float euler[3] = {0};     // 欧拉角 (roll, pitch, yaw) (deg)
+    float gyro[3] = {0};      // 角速度 (deg/s) [X, Y, Z]
+    float accel[3] = {0};     // 加速度 (g) [X, Y, Z]
+    float euler[3] = {0};     // 欧拉角 (rad) [roll, pitch, yaw]
     float temperature = 0.0f; // 温度 (C)
 };
 
@@ -81,7 +84,7 @@ struct RobotCommand {
 struct RobotFeedback {
     LegFeedback left_leg;
     LegFeedback right_leg;
-    IMUFeedback imu[2];      // 2个IMU
+    IMUFeedback imu[2];      // 2个IMU: [0]=ICM20602, [1]=Waveshare
     uint64_t timestamp_us = 0;
 };
 

@@ -1,6 +1,6 @@
 /**
  * @file test_motor_control.cpp
- * @brief ������Ʋ���
+ * @brief 电机控制测试
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -14,63 +14,64 @@
 
 using namespace odroid;
 
-void test_motor_encoding(const char* name, float pos, float vel, float kp, float kd,
-                          float pos_max, float vel_max, float kp_max, float kd_max) {
-    MotorCommand cmd;
-    cmd.position = pos;
-    cmd.velocity = vel;
-    cmd.kp = kp;
-    cmd.kd = kd;
-
-    uint16_t buf[4];
-    Protocol::encode_motor_cmd(cmd, buf, pos_max, vel_max, kp_max, kd_max);
-    
-    LOG_INFO("%s: pos=%.2f->%u, vel=%.2f->%u, kp=%.1f->%u, kd=%.2f->%u",
-             name, pos, buf[0], vel, buf[1], kp, buf[2], kd, buf[3]);
-}
-
 void test_encoding_accuracy() {
-    LOG_INFO("--- ���뾫�Ȳ��� ---");
-    
-    // ���ԶԳƱ���
+    LOG_INFO("--- 编码精度测试 ---");
+
+    // 测试对称编码
     float test_values[] = {-12.5f, -1.0f, 0.0f, 1.0f, 12.5f};
     for (float val : test_values) {
-        uint16_t encoded = encode_float_symmetric(val, 12.5f);
-        float decoded = decode_float_symmetric(encoded, 12.5f);
+        uint16_t encoded = encode_symmetric(val, 12.5f);
+        float decoded = decode_symmetric(encoded, 12.5f);
         float error = std::abs(val - decoded);
-        LOG_INFO("�ԳƱ���: %.3f -> %u -> %.6f (���: %.6f)", val, encoded, decoded, error);
+        LOG_INFO("对称编码: %.3f -> %u -> %.6f (误差: %.6f)", val, encoded, decoded, error);
+    }
+    
+    // 测试非负编码
+    float kp_values[] = {0.0f, 100.0f, 250.0f, 500.0f};
+    for (float val : kp_values) {
+        uint16_t encoded = encode_unsigned(val, 500.0f);
+        float decoded = decode_unsigned(encoded, 500.0f);
+        float error = std::abs(val - decoded);
+        LOG_INFO("非负编码: %.1f -> %u -> %.6f (误差: %.6f)", val, encoded, decoded, error);
     }
 }
 
 int main() {
     Logger::instance().set_level(LogLevel::DEBUG);
-    
-    LOG_INFO("=== ������Ʋ��Կ�ʼ ===");
 
-    // ���Բ�ͬ������͵ı���
-    LOG_INFO("--- DM6006 (�Źؽ�) ������� ---");
-    test_motor_encoding("DM6006", 1.0f, 5.0f, 150.0f, 3.0f,
-                         DM6006_POS_MAX, DM6006_VEL_MAX, DM6006_KP_MAX, DM6006_KD_MAX);
-    
-    LOG_INFO("--- DM4340 (����/ϥ�ؽ�) ������� ---");
-    test_motor_encoding("DM4340", 0.5f, 10.0f, 200.0f, 2.0f,
-                         DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_KP_MAX, DM4340_KD_MAX);
-    
-    LOG_INFO("--- DM8006 (�׹ؽ�) ������� ---");
-    test_motor_encoding("DM8006", -0.3f, 3.0f, 100.0f, 4.0f,
-                         DM8006_POS_MAX, DM8006_VEL_MAX, DM8006_KP_MAX, DM8006_KD_MAX);
+    LOG_INFO("=== 电机控制测试开始 ===");
 
-    // ���뾫�Ȳ���
-    test_encoding_accuracy();
-
-    // ���������˱���/�������
-    LOG_INFO("--- ���������˱������� ---");
+    // 测试完整机器人编码/解码链路
+    LOG_INFO("--- 完整机器人编码测试 ---");
     RobotCommand cmd;
-    cmd.left_leg.hip.position = 1.0f;
-    cmd.left_leg.hip.velocity = 2.0f;
-    cmd.left_leg.hip.kp = 100.0f;
-    cmd.left_leg.hip.kd = 2.0f;
     
+    // 左腿各关节设置 (与STM32关节顺序一致)
+    cmd.left_leg.yaw.position = 1.0f;      // DM6006
+    cmd.left_leg.yaw.velocity = 2.0f;
+    cmd.left_leg.yaw.kp = 100.0f;
+    cmd.left_leg.yaw.kd = 2.0f;
+
+    cmd.left_leg.roll.position = 0.5f;     // DM4340
+    cmd.left_leg.roll.velocity = 1.0f;
+    cmd.left_leg.roll.kp = 150.0f;
+    cmd.left_leg.roll.kd = 2.5f;
+
+    cmd.left_leg.pitch.position = -0.3f;   // DM8006
+    cmd.left_leg.pitch.velocity = 3.0f;
+    cmd.left_leg.pitch.kp = 200.0f;
+    cmd.left_leg.pitch.kd = 3.0f;
+
+    cmd.left_leg.knee.position = 0.8f;     // DM6006
+    cmd.left_leg.knee.velocity = 4.0f;
+    cmd.left_leg.knee.kp = 120.0f;
+    cmd.left_leg.knee.kd = 2.2f;
+
+    cmd.left_leg.ankle.position = -0.5f;   // DM6006
+    cmd.left_leg.ankle.velocity = 1.5f;
+    cmd.left_leg.ankle.kp = 180.0f;
+    cmd.left_leg.ankle.kd = 3.5f;
+
+    // 右腿踝关节
     cmd.right_leg.ankle.position = -0.5f;
     cmd.right_leg.ankle.velocity = 1.0f;
     cmd.right_leg.ankle.kp = 150.0f;
@@ -78,13 +79,24 @@ int main() {
 
     SPITxBuffer tx_buf;
     Protocol::encode_robot_cmd(cmd, tx_buf);
-    
-    LOG_INFO("TX���������� (����):");
-    LOG_INFO("  [0-3] ����: %u %u %u %u", 
+
+    LOG_INFO("TX缓冲区数据 (采样):");
+    LOG_INFO("  左腿Yaw [0-3]: %u %u %u %u",
              tx_buf.data[0], tx_buf.data[1], tx_buf.data[2], tx_buf.data[3]);
-    LOG_INFO("  [36-39] ����: %u %u %u %u", 
+    LOG_INFO("  左腿Roll [4-7]: %u %u %u %u",
+             tx_buf.data[4], tx_buf.data[5], tx_buf.data[6], tx_buf.data[7]);
+    LOG_INFO("  左腿Pitch [8-11]: %u %u %u %u",
+             tx_buf.data[8], tx_buf.data[9], tx_buf.data[10], tx_buf.data[11]);
+    LOG_INFO("  左腿Knee [12-15]: %u %u %u %u",
+             tx_buf.data[12], tx_buf.data[13], tx_buf.data[14], tx_buf.data[15]);
+    LOG_INFO("  左腿Ankle [16-19]: %u %u %u %u",
+             tx_buf.data[16], tx_buf.data[17], tx_buf.data[18], tx_buf.data[19]);
+    LOG_INFO("  右腿Ankle [36-39]: %u %u %u %u",
              tx_buf.data[36], tx_buf.data[37], tx_buf.data[38], tx_buf.data[39]);
 
-    LOG_INFO("=== ������Ʋ������ ===");
+    // 编码精度测试
+    test_encoding_accuracy();
+
+    LOG_INFO("=== 电机控制测试完成 ===");
     return 0;
 }

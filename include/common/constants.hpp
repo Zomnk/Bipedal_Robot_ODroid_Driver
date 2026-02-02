@@ -15,27 +15,27 @@
 namespace odroid {
 
 //==============================================================================
-// 电机参数常量 - 达妙电机
+// 电机参数常量 - 达妙电机 (与STM32 F405保持一致)
 //==============================================================================
 
-// DM6006 (髋关节 - Hip)
+// DM6006 (髋关节Yaw, 膝关节Knee, 踝关节Ankle)
 constexpr float DM6006_POS_MAX    = 12.5f;     // rad
 constexpr float DM6006_VEL_MAX    = 45.0f;     // rad/s
 constexpr float DM6006_TORQUE_MAX = 12.0f;     // Nm
 constexpr float DM6006_KP_MAX     = 500.0f;
 constexpr float DM6006_KD_MAX     = 5.0f;
 
-// DM4340 (大腿Thigh/小腿Calf/膝关节Knee)
+// DM4340 (髋关节Roll)
 constexpr float DM4340_POS_MAX    = 12.5f;     // rad
-constexpr float DM4340_VEL_MAX    = 30.0f;     // rad/s
+constexpr float DM4340_VEL_MAX    = 10.0f;     // rad/s (STM32: 10.0f)
 constexpr float DM4340_TORQUE_MAX = 27.0f;     // Nm
 constexpr float DM4340_KP_MAX     = 500.0f;
 constexpr float DM4340_KD_MAX     = 5.0f;
 
-// DM8006 (踝关节 - Ankle)
+// DM8006 (髋关节Pitch)
 constexpr float DM8006_POS_MAX    = 12.5f;     // rad
-constexpr float DM8006_VEL_MAX    = 25.0f;     // rad/s
-constexpr float DM8006_TORQUE_MAX = 40.0f;     // Nm
+constexpr float DM8006_VEL_MAX    = 45.0f;     // rad/s (STM32: 45.0f)
+constexpr float DM8006_TORQUE_MAX = 20.0f;     // Nm (STM32: 20.0f)
 constexpr float DM8006_KP_MAX     = 500.0f;
 constexpr float DM8006_KD_MAX     = 5.0f;
 
@@ -80,6 +80,16 @@ constexpr int CPU_CORE_MAIN    = 3;     // 主线程绑定核心
 constexpr uint32_t CONTROL_FREQ_HZ   = 1000;      // 1kHz控制频率
 constexpr uint32_t CONTROL_PERIOD_US = 1000000 / CONTROL_FREQ_HZ;  // 1000us
 constexpr uint32_t SPI_PERIOD_US     = CONTROL_PERIOD_US;          // SPI周期=控制周期
+
+//==============================================================================
+// IMU参数范围 (与STM32保持一致)
+//==============================================================================
+
+constexpr float IMU_GYRO_MAX   = 2000.0f;   // deg/s
+constexpr float IMU_ACCEL_MAX  = 16.0f;     // g
+constexpr float IMU_RPY_MAX    = 3.14159f;  // rad (STM32用rad)
+constexpr float IMU_TEMP_MAX   = 100.0f;    // C
+constexpr float IMU_TEMP_MIN   = -20.0f;    // C
 
 //==============================================================================
 // 工具函数
