@@ -113,7 +113,7 @@ int main() {
     }
 
     // 控制参数
-    const float kp = 1.0f;
+    const float kp = 3.0f;
     const float kd = 0.4f;
     const float velocity = 0.0f;
     const float pos_high = 1.57f;   // +90度
