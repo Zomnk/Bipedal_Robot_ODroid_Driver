@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
+#include <endian.h>
 
 #include "common/types.hpp"
 #include "common/constants.hpp"
@@ -55,9 +56,9 @@ public:
         }
         
         // 配置SPI模式 (CPOL=0, CPHA=0, 与STM32一致)
-        // 注意: 无NSS模式在设备树中配置，这里只设置基本模式
-        uint8_t mode = config_.mode;
-        if (ioctl(fd_, SPI_IOC_WR_MODE, &mode) < 0) {
+        // 添加 SPI_NO_CS 标志，因为我们没有使用硬件片选
+        uint32_t mode32 = config_.mode | SPI_NO_CS;
+        if (ioctl(fd_, SPI_IOC_WR_MODE32, &mode32) < 0) {
             LOG_ERROR("设置SPI模式失败");
             ::close(fd_);
             fd_ = -1;

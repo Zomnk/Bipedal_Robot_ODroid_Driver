@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
+#include <endian.h>
 
 #include "common/types.hpp"
 #include "common/constants.hpp"
