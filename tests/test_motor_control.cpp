@@ -94,8 +94,8 @@ int main() {
     Logger::instance().set_level(LogLevel::INFO);
 
     LOG_INFO("=== 左腿电机控制测试 ===");
-    LOG_INFO("测试参数: vel=0, kp=3, kd=0.4");
-    LOG_INFO("位置目标: 每3秒在 -1.57 和 +1.57 之间切换");
+    LOG_INFO("测试参数: vel=0, kp=1, kd=0.4");
+    LOG_INFO("位置目标: 正弦函数, 幅值=PI, 周期=4秒");
     LOG_INFO("按 Ctrl+C 退出测试");
     LOG_INFO("");
 
@@ -116,13 +116,12 @@ int main() {
     const float kp = 1.0f;
     const float kd = 0.4f;
     const float velocity = 0.0f;
-    const float pos_high = 1.57f;   // +90度
-    const float pos_low = -1.57f;   // -90度
-    const uint64_t switch_interval_us = 3000000;  // 3秒切换
+    const float amplitude = M_PI;       // 幅值为PI
+    const float period_s = 4.0f;        // 周期4秒
+    const float omega = 2.0f * M_PI / period_s;  // 角频率
 
     // 状态变量
-    float target_position = pos_high;
-    uint64_t last_switch_time = get_time_us();
+    uint64_t start_time = get_time_us();
     uint64_t last_print_time = get_time_us();
     const uint64_t print_interval_us = 500000;  // 每500ms打印一次
 
@@ -132,12 +131,9 @@ int main() {
     while (g_running) {
         uint64_t now = get_time_us();
 
-        // 每3秒切换位置目标
-        if (now - last_switch_time >= switch_interval_us) {
-            target_position = (target_position > 0) ? pos_low : pos_high;
-            last_switch_time = now;
-            LOG_INFO(">>> 切换目标位置: %.2f rad <<<", target_position);
-        }
+        // 计算正弦目标位置: position = amplitude * sin(omega * t)
+        float elapsed_s = (now - start_time) / 1000000.0f;
+        float target_position = amplitude * std::sin(omega * elapsed_s);
 
         // 发送左腿控制指令
         RobotCommand cmd{};
