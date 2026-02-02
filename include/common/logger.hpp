@@ -1,6 +1,6 @@
 /**
  * @file logger.hpp
- * @brief »’÷æœµÕ≥
+ * @brief Êó•ÂøóÁ≥ªÁªü
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -11,28 +11,21 @@
 #include <cstdio>
 #include <cstdarg>
 #include <ctime>
+#include <mutex>
 
-// »°œ˚ø…ƒ‹”…±‡“Î∆˜∂®“ÂµƒDEBUG∫Í£¨±‹√‚”ÎLogLevel::DEBUG≥ÂÕª
-#ifdef DEBUG
+// Èò≤Ê≠¢‰∏éÁ≥ªÁªüDEBUGÂÆèÂÜ≤Á™Å
 #undef DEBUG
-#endif
 
 namespace odroid {
 
-/**
- * @brief »’÷æº∂±√∂æŸ
- */
 enum class LogLevel {
-    DEBUG = 0,  // µ˜ ‘–≈œ¢
-    INFO  = 1,  // “ª∞„–≈œ¢
-    WARN  = 2,  // æØ∏Ê
-    ERROR = 3,  // ¥ÌŒÛ
-    FATAL = 4   // ÷¬√¸¥ÌŒÛ
+    DEBUG = 0,
+    INFO,
+    WARN,
+    ERROR,
+    FATAL
 };
 
-/**
- * @brief »’÷æ¿‡ (µ•¿˝ƒ£ Ω)
- */
 class Logger {
 public:
     static Logger& instance() {
@@ -46,64 +39,39 @@ public:
     void log(LogLevel level, const char* file, int line, const char* fmt, ...) {
         if (level < level_) return;
 
-        // ªÒ»° ±º‰¥¡
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        // Êó∂Èó¥Êà≥
         time_t now = time(nullptr);
-        struct tm* tm_info = localtime(&now);
-        char time_buf[32];
-        strftime(time_buf, sizeof(time_buf), "%H:%M:%S", tm_info);
+        struct tm* t = localtime(&now);
+        printf("[%02d:%02d:%02d] ", t->tm_hour, t->tm_min, t->tm_sec);
 
-        // ªÒ»°º∂±◊÷∑˚¥Æ
-        const char* level_str = get_level_str(level);
-        
-        // ¥Ú”°»’÷æÕ∑
-        fprintf(stderr, "[%s][%s] %s:%d: ", time_buf, level_str, file, line);
+        // Á∫ßÂà´
+        const char* level_str[] = {"DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
+        printf("[%s] ", level_str[static_cast<int>(level)]);
 
-        // ¥Ú”°»’÷æƒ⁄»›
+        // Ê∂àÊÅØ
         va_list args;
         va_start(args, fmt);
-        vfprintf(stderr, fmt, args);
+        vprintf(fmt, args);
         va_end(args);
 
-        fprintf(stderr, "\n");
-        fflush(stderr);
+        printf("\n");
+        fflush(stdout);
     }
 
 private:
     Logger() : level_(LogLevel::INFO) {}
-
-    const char* get_level_str(LogLevel level) const {
-        switch (level) {
-            case LogLevel::DEBUG: return "DEBUG";
-            case LogLevel::INFO:  return "INFO ";
-            case LogLevel::WARN:  return "WARN ";
-            case LogLevel::ERROR: return "ERROR";
-            case LogLevel::FATAL: return "FATAL";
-            default: return "?????";
-        }
-    }
-
     LogLevel level_;
+    std::mutex mutex_;
 };
 
+#define LOG_DEBUG(fmt, ...) odroid::Logger::instance().log(odroid::LogLevel::DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...)  odroid::Logger::instance().log(odroid::LogLevel::INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...)  odroid::Logger::instance().log(odroid::LogLevel::WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) odroid::Logger::instance().log(odroid::LogLevel::ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define LOG_FATAL(fmt, ...) odroid::Logger::instance().log(odroid::LogLevel::FATAL, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+
 } // namespace odroid
-
-//==============================================================================
-// »’÷æ∫Í∂®“Â (‘⁄namespaceÕ‚≤ø∂®“Â)
-//==============================================================================
-
-#define LOG_DEBUG(fmt, ...) \
-    odroid::Logger::instance().log(odroid::LogLevel::DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-#define LOG_INFO(fmt, ...) \
-    odroid::Logger::instance().log(odroid::LogLevel::INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-#define LOG_WARN(fmt, ...) \
-    odroid::Logger::instance().log(odroid::LogLevel::WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-#define LOG_ERROR(fmt, ...) \
-    odroid::Logger::instance().log(odroid::LogLevel::ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-#define LOG_FATAL(fmt, ...) \
-    odroid::Logger::instance().log(odroid::LogLevel::FATAL, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 #endif // ODROID_COMMON_LOGGER_HPP

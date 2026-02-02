@@ -1,6 +1,6 @@
 /**
  * @file types.hpp
- * @brief Êı¾İÀàĞÍ¶¨Òå
+ * @brief æ•°æ®ç±»å‹å®šä¹‰
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -9,113 +9,101 @@
 #define ODROID_COMMON_TYPES_HPP
 
 #include <cstdint>
+#include <array>
 #include "constants.hpp"
 
 namespace odroid {
 
-//==============================================================================
-// µç»úÏà¹ØÀàĞÍ
-//==============================================================================
-
 /**
- * @brief µ¥¸öµç»ú¿ØÖÆÖ¸Áî
+ * @brief ç”µæœºæ§åˆ¶æŒ‡ä»¤
  */
 struct MotorCommand {
-    float position = 0.0f;    // Ä¿±êÎ»ÖÃ (rad)
-    float velocity = 0.0f;    // Ä¿±êËÙ¶È (rad/s)
-    float kp = 0.0f;          // Î»ÖÃÔöÒæ
-    float kd = 0.0f;          // ËÙ¶ÈÔöÒæ
-    float feedforward = 0.0f; // Ç°À¡Á¦¾Ø (Nm) - ÔİÎ´Ê¹ÓÃ
+    float position = 0.0f;    // ç›®æ ‡ä½ç½® (rad)
+    float velocity = 0.0f;    // ç›®æ ‡é€Ÿåº¦ (rad/s)
+    float kp = 0.0f;          // ä½ç½®å¢ç›Š
+    float kd = 0.0f;          // é€Ÿåº¦å¢ç›Š
 };
 
 /**
- * @brief µ¥¸öµç»ú·´À¡Êı¾İ
+ * @brief ç”µæœºåé¦ˆæ•°æ®
  */
 struct MotorFeedback {
-    float position = 0.0f;    // µ±Ç°Î»ÖÃ (rad)
-    float velocity = 0.0f;    // µ±Ç°ËÙ¶È (rad/s)
-    float torque = 0.0f;      // µ±Ç°Á¦¾Ø (Nm)
-    float temperature = 0.0f; // ÎÂ¶È (C)
+    float position = 0.0f;      // å½“å‰ä½ç½® (rad)
+    float velocity = 0.0f;      // å½“å‰é€Ÿåº¦ (rad/s)
+    float torque = 0.0f;        // å½“å‰åŠ›çŸ© (Nm)
+    float temperature = 0.0f;   // ç”µæœºæ¸©åº¦ (C)
 };
 
-//==============================================================================
-// ÍÈ²¿Ïà¹ØÀàĞÍ (Ã¿ÌõÍÈ5¸ö¹Ø½Ú)
-//==============================================================================
-
 /**
- * @brief µ¥ÌõÍÈ¿ØÖÆÖ¸Áî (5¸ö¹Ø½Ú)
+ * @brief å•è…¿æ§åˆ¶æŒ‡ä»¤ (5ä¸ªå…³èŠ‚)
  */
 struct LegCommand {
-    MotorCommand hip;         // ÷Å¹Ø½Ú (DM6006)
-    MotorCommand thigh;       // ´óÍÈ (DM4340)
-    MotorCommand calf;        // Ğ¡ÍÈ (DM4340)
-    MotorCommand knee;        // Ï¥¹Ø½Ú (DM4340)
-    MotorCommand ankle;       // õ×¹Ø½Ú (DM8006)
+    MotorCommand hip;     // é«‹å…³èŠ‚ (yaw)
+    MotorCommand thigh;   // å¤§è…¿ (roll)
+    MotorCommand calf;    // å°è…¿ (pitch)
+    MotorCommand knee;    // è†å…³èŠ‚
+    MotorCommand ankle;   // è¸å…³èŠ‚
 };
 
 /**
- * @brief µ¥ÌõÍÈ·´À¡Êı¾İ (5¸ö¹Ø½Ú)
+ * @brief å•è…¿åé¦ˆæ•°æ® (5ä¸ªå…³èŠ‚)
  */
 struct LegFeedback {
-    MotorFeedback hip;        // ÷Å¹Ø½Ú (DM6006)
-    MotorFeedback thigh;      // ´óÍÈ (DM4340)
-    MotorFeedback calf;       // Ğ¡ÍÈ (DM4340)
-    MotorFeedback knee;       // Ï¥¹Ø½Ú (DM4340)
-    MotorFeedback ankle;      // õ×¹Ø½Ú (DM8006)
+    MotorFeedback hip;
+    MotorFeedback thigh;
+    MotorFeedback calf;
+    MotorFeedback knee;
+    MotorFeedback ankle;
 };
 
-//==============================================================================
-// IMUÏà¹ØÀàĞÍ
-//==============================================================================
-
 /**
- * @brief IMU·´À¡Êı¾İ (10¸öuint16_t = 20×Ö½Ú)
+ * @brief IMUåé¦ˆæ•°æ®
  */
 struct IMUFeedback {
-    float accel[3] = {0};     // ¼ÓËÙ¶È x,y,z (m/s^2)
-    float gyro[3] = {0};      // ½ÇËÙ¶È x,y,z (deg/s)
-    float euler[3] = {0};     // Å·À­½Ç roll,pitch,yaw (deg)
-    float temperature = 0.0f; // ÎÂ¶È (C)
+    float accel[3] = {0};     // åŠ é€Ÿåº¦ (m/s^2)
+    float gyro[3] = {0};      // è§’é€Ÿåº¦ (deg/s)
+    float euler[3] = {0};     // æ¬§æ‹‰è§’ (roll, pitch, yaw) (deg)
+    float temperature = 0.0f; // æ¸©åº¦ (C)
 };
 
-//==============================================================================
-// »úÆ÷ÈËÕûÌåÀàĞÍ
-//==============================================================================
-
 /**
- * @brief »úÆ÷ÈË¿ØÖÆÖ¸Áî (10¸öµç»ú = 40 words)
+ * @brief æœºå™¨äººæ§åˆ¶æŒ‡ä»¤
  */
 struct RobotCommand {
-    LegCommand left_leg;      // ×óÍÈ (5¸ö¹Ø½Ú)
-    LegCommand right_leg;     // ÓÒÍÈ (5¸ö¹Ø½Ú)
-    uint64_t timestamp_us = 0;// Ê±¼ä´Á
+    LegCommand left_leg;   // å·¦è…¿
+    LegCommand right_leg;  // å³è…¿
+    uint64_t timestamp_us = 0;
 };
 
 /**
- * @brief »úÆ÷ÈË·´À¡Êı¾İ (10¸öµç»ú + 2¸öIMU = 60 words)
+ * @brief æœºå™¨äººåé¦ˆæ•°æ®
  */
 struct RobotFeedback {
-    LegFeedback left_leg;     // ×óÍÈ (5¸ö¹Ø½Ú)
-    LegFeedback right_leg;    // ÓÒÍÈ (5¸ö¹Ø½Ú)
-    IMUFeedback imu[2];       // Á½¸öIMU
-    uint64_t timestamp_us = 0;// Ê±¼ä´Á
+    LegFeedback left_leg;
+    LegFeedback right_leg;
+    IMUFeedback imu[2];      // 2ä¸ªIMU
+    uint64_t timestamp_us = 0;
 };
 
-//==============================================================================
-// SPI»º³åÇøÀàĞÍ
-//==============================================================================
+/**
+ * @brief SPIé…ç½®
+ */
+struct SPIConfig {
+    const char* device = SPI_DEVICE_DEFAULT;
+    uint32_t speed_hz = SPI_SPEED_HZ;
+    uint8_t bits_per_word = SPI_BITS_PER_WORD;
+    uint8_t mode = SPI_MODE;
+};
 
 /**
- * @brief SPI·¢ËÍ»º³åÇø (¿ØÖÆÖ¸Áî)
- * ²¼¾Ö: [×óÍÈ5µç»ú*4²ÎÊı=20] [ÓÒÍÈ5µç»ú*4²ÎÊı=20] = 40 words
+ * @brief SPIå‘é€ç¼“å†²åŒº
  */
 struct SPITxBuffer {
     uint16_t data[SPI_TX_WORDS] = {0};
 };
 
 /**
- * @brief SPI½ÓÊÕ»º³åÇø (·´À¡Êı¾İ)
- * ²¼¾Ö: [×óÍÈ5µç»ú*4²ÎÊı=20] [ÓÒÍÈ5µç»ú*4²ÎÊı=20] [IMU0*10] [IMU1*10] = 60 words
+ * @brief SPIæ¥æ”¶ç¼“å†²åŒº
  */
 struct SPIRxBuffer {
     uint16_t data[SPI_RX_WORDS] = {0};

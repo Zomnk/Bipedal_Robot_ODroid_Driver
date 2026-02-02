@@ -1,6 +1,6 @@
 /**
  * @file test_motor_control.cpp
- * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ²ï¿½ï¿½ï¿½
+ * @brief µç»ú¿ØÖÆ²âÊÔ
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -30,41 +30,41 @@ void test_motor_encoding(const char* name, float pos, float vel, float kp, float
 }
 
 void test_encoding_accuracy() {
-    LOG_INFO("--- ï¿½ï¿½ï¿½ë¾«ï¿½È²ï¿½ï¿½ï¿½ ---");
+    LOG_INFO("--- ±àÂë¾«¶È²âÊÔ ---");
     
-    // ï¿½ï¿½ï¿½Ô¶Ô³Æ±ï¿½ï¿½ï¿½
+    // ²âÊÔ¶Ô³Æ±àÂë
     float test_values[] = {-12.5f, -1.0f, 0.0f, 1.0f, 12.5f};
     for (float val : test_values) {
         uint16_t encoded = encode_float_symmetric(val, 12.5f);
         float decoded = decode_float_symmetric(encoded, 12.5f);
         float error = std::abs(val - decoded);
-        LOG_INFO("ï¿½Ô³Æ±ï¿½ï¿½ï¿½: %.3f -> %u -> %.6f (ï¿½ï¿½ï¿½: %.6f)", val, encoded, decoded, error);
+        LOG_INFO("¶Ô³Æ±àÂë: %.3f -> %u -> %.6f (Îó²î: %.6f)", val, encoded, decoded, error);
     }
 }
 
 int main() {
     Logger::instance().set_level(LogLevel::DEBUG);
     
-    LOG_INFO("=== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ²ï¿½ï¿½Ô¿ï¿½Ê¼ ===");
+    LOG_INFO("=== µç»ú¿ØÖÆ²âÊÔ¿ªÊ¼ ===");
 
-    // ï¿½ï¿½ï¿½Ô²ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄ±ï¿½ï¿½ï¿½
-    LOG_INFO("--- DM6006 (ï¿½Å¹Ø½ï¿½) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---");
+    // ²âÊÔ²»Í¬µç»úÀàÐÍµÄ±àÂë
+    LOG_INFO("--- DM6006 (÷Å¹Ø½Ú) ±àÂë²âÊÔ ---");
     test_motor_encoding("DM6006", 1.0f, 5.0f, 150.0f, 3.0f,
                          DM6006_POS_MAX, DM6006_VEL_MAX, DM6006_KP_MAX, DM6006_KD_MAX);
     
-    LOG_INFO("--- DM4340 (ï¿½ï¿½ï¿½ï¿½/Ï¥ï¿½Ø½ï¿½) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---");
+    LOG_INFO("--- DM4340 (´óÍÈ/Ï¥¹Ø½Ú) ±àÂë²âÊÔ ---");
     test_motor_encoding("DM4340", 0.5f, 10.0f, 200.0f, 2.0f,
                          DM4340_POS_MAX, DM4340_VEL_MAX, DM4340_KP_MAX, DM4340_KD_MAX);
     
-    LOG_INFO("--- DM8006 (ï¿½×¹Ø½ï¿½) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---");
+    LOG_INFO("--- DM8006 (õ×¹Ø½Ú) ±àÂë²âÊÔ ---");
     test_motor_encoding("DM8006", -0.3f, 3.0f, 100.0f, 4.0f,
                          DM8006_POS_MAX, DM8006_VEL_MAX, DM8006_KP_MAX, DM8006_KD_MAX);
 
-    // ï¿½ï¿½ï¿½ë¾«ï¿½È²ï¿½ï¿½ï¿½
+    // ±àÂë¾«¶È²âÊÔ
     test_encoding_accuracy();
 
-    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë±ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-    LOG_INFO("--- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---");
+    // ÍêÕû»úÆ÷ÈË±àÂë/½âÂë²âÊÔ
+    LOG_INFO("--- ÍêÕû»úÆ÷ÈË±à½âÂë²âÊÔ ---");
     RobotCommand cmd;
     cmd.left_leg.hip.position = 1.0f;
     cmd.left_leg.hip.velocity = 2.0f;
@@ -79,12 +79,12 @@ int main() {
     SPITxBuffer tx_buf;
     Protocol::encode_robot_cmd(cmd, tx_buf);
     
-    LOG_INFO("TXï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½):");
-    LOG_INFO("  [0-3] ï¿½ï¿½ï¿½ï¿½: %u %u %u %u", 
+    LOG_INFO("TX»º³åÇøÄÚÈÝ (²¿·Ö):");
+    LOG_INFO("  [0-3] ×ó÷Å: %u %u %u %u", 
              tx_buf.data[0], tx_buf.data[1], tx_buf.data[2], tx_buf.data[3]);
-    LOG_INFO("  [36-39] ï¿½ï¿½ï¿½ï¿½: %u %u %u %u", 
+    LOG_INFO("  [36-39] ÓÒõ×: %u %u %u %u", 
              tx_buf.data[36], tx_buf.data[37], tx_buf.data[38], tx_buf.data[39]);
 
-    LOG_INFO("=== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ===");
+    LOG_INFO("=== µç»ú¿ØÖÆ²âÊÔÍê³É ===");
     return 0;
 }

@@ -1,6 +1,6 @@
 /**
  * @file test_rt_timing.cpp
- * @brief ÊµÊ±¶¨Ê±²âÊÔ
+ * @brief å®æ—¶å®šæ—¶æµ‹è¯•
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -18,20 +18,20 @@ using namespace odroid;
 int main() {
     Logger::instance().set_level(LogLevel::DEBUG);
     
-    LOG_INFO("=== ÊµÊ±¶¨Ê±²âÊÔ¿ªÊ¼ ===");
-    LOG_INFO("¿ØÖÆÖÜÆÚ: %u us (%u Hz)", CONTROL_PERIOD_US, CONTROL_FREQ_HZ);
+    LOG_INFO("=== å®æ—¶å®šæ—¶æµ‹è¯•å¼€å§‹ ===");
+    LOG_INFO("æ§åˆ¶å‘¨æœŸ: %u us (%u Hz)", CONTROL_PERIOD_US, CONTROL_FREQ_HZ);
 
     constexpr int NUM_ITERATIONS = 1000;
     uint64_t times[NUM_ITERATIONS];
 
-    // Ê¹ÓÃstd::this_thread::sleep_for²âÊÔ
-    LOG_INFO("--- ²âÊÔ std::this_thread::sleep_for ---");
+    // ä½¿ç”¨std::this_thread::sleep_foræµ‹è¯•
+    LOG_INFO("--- æµ‹è¯• std::this_thread::sleep_for ---");
     for (int i = 0; i < NUM_ITERATIONS; ++i) {
         times[i] = get_time_us();
         std::this_thread::sleep_for(std::chrono::microseconds(CONTROL_PERIOD_US));
     }
 
-    // Í³¼ÆÖÜÆÚÎó²î
+    // ç»Ÿè®¡å‘¨æœŸè¯¯å·®
     int64_t max_jitter = 0;
     int64_t min_jitter = INT64_MAX;
     int64_t sum_jitter = 0;
@@ -45,11 +45,11 @@ int main() {
     }
 
     double avg_jitter = static_cast<double>(sum_jitter) / (NUM_ITERATIONS - 1);
-    LOG_INFO("sleep_for½á¹û: Æ½¾ù¶¶¶¯=%.1fus, ×îĞ¡=%ldus, ×î´ó=%ldus",
+    LOG_INFO("sleep_forç»“æœ: å¹³å‡æŠ–åŠ¨=%.1fus, æœ€å°=%ldus, æœ€å¤§=%ldus",
              avg_jitter, (long)min_jitter, (long)max_jitter);
 
-    // Ê¹ÓÃPeriodicTimer²âÊÔ
-    LOG_INFO("--- ²âÊÔ PeriodicTimer ---");
+    // ä½¿ç”¨PeriodicTimeræµ‹è¯•
+    LOG_INFO("--- æµ‹è¯• PeriodicTimer ---");
     PeriodicTimer timer(CONTROL_PERIOD_US);
     int missed = 0;
 
@@ -60,7 +60,7 @@ int main() {
         }
     }
 
-    // ÖØĞÂÍ³¼Æ
+    // é‡æ–°ç»Ÿè®¡
     max_jitter = 0;
     min_jitter = INT64_MAX;
     sum_jitter = 0;
@@ -74,16 +74,16 @@ int main() {
     }
 
     avg_jitter = static_cast<double>(sum_jitter) / (NUM_ITERATIONS - 1);
-    LOG_INFO("PeriodicTimer½á¹û: Æ½¾ù¶¶¶¯=%.1fus, ×îĞ¡=%ldus, ×î´ó=%ldus, ´í¹ı=%d",
+    LOG_INFO("PeriodicTimerç»“æœ: å¹³å‡æŠ–åŠ¨=%.1fus, æœ€å°=%ldus, æœ€å¤§=%ldus, é”™è¿‡=%d",
              avg_jitter, (long)min_jitter, (long)max_jitter, missed);
 
-    // ²âÊÔTimerÀà
-    LOG_INFO("--- ²âÊÔ Timer Àà ---");
+    // æµ‹è¯•Timerç±»
+    LOG_INFO("--- æµ‹è¯• Timer ç±» ---");
     Timer t;
     sleep_ms(100);
-    LOG_INFO("100msºó: elapsed_ms=%lu, elapsed_us=%lu",
+    LOG_INFO("100mså: elapsed_ms=%lu, elapsed_us=%lu",
              (unsigned long)t.elapsed_ms(), (unsigned long)t.elapsed_us());
 
-    LOG_INFO("=== ÊµÊ±¶¨Ê±²âÊÔÍê³É ===");
+    LOG_INFO("=== å®æ—¶å®šæ—¶æµ‹è¯•å®Œæˆ ===");
     return 0;
 }

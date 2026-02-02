@@ -1,96 +1,28 @@
 /**
  * @file time_utils.hpp
- * @brief ¸ß¾«¶ÈÊ±¼ä¹¤¾ß
+ * @brief æ—¶é—´å·¥å…·å‡½æ•°
  * @author Zomnk
  * @date 2026-02-01
- * 
- * ×¢Òâ: »ù±¾µÄ get_time_us() º¯Êý¶¨ÒåÔÚ constants.hpp ÖÐ
- * ±¾ÎÄ¼þÌá¹©¸ü·á¸»µÄÊ±¼ä¹¤¾ßÀà
  */
 
 #ifndef ODROID_COMMON_TIME_UTILS_HPP
 #define ODROID_COMMON_TIME_UTILS_HPP
 
 #include <cstdint>
-#include <ctime>
-#include <cmath>
-
-#include "constants.hpp"  // °üº¬ get_time_us()
+#include <thread>
+#include <chrono>
+#include "constants.hpp"
 
 namespace odroid {
 
-//==============================================================================
-// À©Õ¹Ê±¼äº¯Êý
-//==============================================================================
+// get_time_us() å’Œ get_time_ns() å·²åœ¨ constants.hpp ä¸­å®šä¹‰
 
 /**
- * @brief »ñÈ¡µ±Ç°Ê±¼ä (ÄÉÃë)
- */
-inline uint64_t get_time_ns() {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return static_cast<uint64_t>(ts.tv_sec) * 1000000000ULL + 
-           static_cast<uint64_t>(ts.tv_nsec);
-}
-
-/**
- * @brief »ñÈ¡µ±Ç°Ê±¼ä (ºÁÃë)
- */
-inline uint64_t get_time_ms() {
-    return get_time_ns() / 1000000;
-}
-
-/**
- * @brief »ñÈ¡µ±Ç°Ê±¼ä (Ãë, ¸¡µãÊý)
- */
-inline double get_time_sec() {
-    return static_cast<double>(get_time_ns()) / 1e9;
-}
-
-/**
- * @brief ¸ß¾«¶ÈÐÝÃß (ÄÉÃë)
- */
-inline void sleep_ns(uint64_t ns) {
-    struct timespec ts;
-    ts.tv_sec = static_cast<time_t>(ns / 1000000000ULL);
-    ts.tv_nsec = static_cast<long>(ns % 1000000000ULL);
-    clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, nullptr);
-}
-
-/**
- * @brief ¸ß¾«¶ÈÐÝÃß (Î¢Ãë)
- */
-inline void sleep_us(uint64_t us) {
-    sleep_ns(us * 1000);
-}
-
-/**
- * @brief ¸ß¾«¶ÈÐÝÃß (ºÁÃë)
- */
-inline void sleep_ms(uint64_t ms) {
-    sleep_ns(ms * 1000000);
-}
-
-/**
- * @brief ÐÝÃßÖ±µ½Ö¸¶¨Ê±¿Ì (ÄÉÃë, ¾ø¶ÔÊ±¼ä)
- */
-inline void sleep_until_ns(uint64_t target_ns) {
-    struct timespec ts;
-    ts.tv_sec = static_cast<time_t>(target_ns / 1000000000ULL);
-    ts.tv_nsec = static_cast<long>(target_ns % 1000000000ULL);
-    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, nullptr);
-}
-
-//==============================================================================
-// ¼ÆÊ±Æ÷Àà
-//==============================================================================
-
-/**
- * @brief ¼òµ¥¼ÆÊ±Æ÷Àà
+ * @brief é«˜ç²¾åº¦è®¡æ—¶å™¨
  */
 class Timer {
 public:
-    Timer() : start_time_(get_time_ns()) {}
+    Timer() { reset(); }
 
     void reset() { start_time_ = get_time_ns(); }
 
@@ -104,88 +36,41 @@ private:
 };
 
 /**
- * @brief ÖÜÆÚ¼ÆÊ±Æ÷ (ÓÃÓÚRTÑ­»·)
+ * @brief å‘¨æœŸå®šæ—¶å™¨
  */
 class PeriodicTimer {
 public:
     explicit PeriodicTimer(uint64_t period_us)
-        : period_ns_(period_us * 1000)
-        , next_time_(get_time_ns() + period_ns_) {}
+        : period_us_(period_us), next_time_(get_time_us() + period_us) {}
 
-    /**
-     * @brief µÈ´ýÖ±µ½ÏÂÒ»¸öÖÜÆÚ
-     * @return ÊÇ·ñ·¢ÉúÁË³¬Ê± (´í¹ýÁËdeadline)
-     */
     bool wait() {
-        uint64_t now = get_time_ns();
+        uint64_t now = get_time_us();
         if (now >= next_time_) {
-            // ´í¹ýÁËdeadline
-            next_time_ = now + period_ns_;
-            return true;
+            next_time_ += period_us_;
+            return true;  // è¶…æ—¶
         }
-        sleep_until_ns(next_time_);
-        next_time_ += period_ns_;
+
+        while (get_time_us() < next_time_) {
+            std::this_thread::sleep_for(std::chrono::microseconds(10));
+        }
+        next_time_ += period_us_;
         return false;
     }
 
-    /**
-     * @brief ÖØÖÃ¶¨Ê±Æ÷
-     */
-    void reset() {
-        next_time_ = get_time_ns() + period_ns_;
-    }
+    void reset() { next_time_ = get_time_us() + period_us_; }
 
 private:
-    uint64_t period_ns_;
+    uint64_t period_us_;
     uint64_t next_time_;
 };
 
-//==============================================================================
-// ÔËÐÐÊ±Í³¼Æ
-//==============================================================================
+inline void sleep_us(uint64_t us) {
+    std::this_thread::sleep_for(std::chrono::microseconds(us));
+}
 
-/**
- * @brief ÔËÐÐÊ±Í³¼ÆÀà
- */
-class RuntimeStats {
-public:
-    RuntimeStats() { reset(); }
-
-    void update(uint64_t value_us) {
-        count_++;
-        sum_ += value_us;
-        sum_sq_ += value_us * value_us;
-        if (value_us < min_) min_ = value_us;
-        if (value_us > max_) max_ = value_us;
-    }
-
-    void reset() {
-        count_ = 0;
-        sum_ = 0;
-        sum_sq_ = 0;
-        min_ = UINT64_MAX;
-        max_ = 0;
-    }
-
-    uint64_t count() const { return count_; }
-    double mean_us() const { return count_ > 0 ? static_cast<double>(sum_) / count_ : 0; }
-    uint64_t min_us() const { return min_ == UINT64_MAX ? 0 : min_; }
-    uint64_t max_us() const { return max_; }
-
-    double std_dev_us() const {
-        if (count_ < 2) return 0;
-        double mean = mean_us();
-        double variance = static_cast<double>(sum_sq_) / count_ - mean * mean;
-        return variance > 0 ? std::sqrt(variance) : 0;
-    }
-
-private:
-    uint64_t count_;
-    uint64_t sum_;
-    uint64_t sum_sq_;
-    uint64_t min_;
-    uint64_t max_;
-};
+inline void sleep_ms(uint64_t ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
 
 } // namespace odroid
 

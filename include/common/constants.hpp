@@ -1,6 +1,6 @@
 /**
  * @file constants.hpp
- * @brief ÏµÍ³³£Á¿¶¨Òå
+ * @brief ç³»ç»Ÿå¸¸é‡å®šä¹‰
  * @author Zomnk
  * @date 2026-02-01
  */
@@ -15,92 +15,88 @@
 namespace odroid {
 
 //==============================================================================
-// µç»ú²ÎÊı³£Á¿ - ´ïÃîµç»ú
+// ç”µæœºå‚æ•°å¸¸é‡ - è¾¾å¦™ç”µæœº
 //==============================================================================
 
-// DM6006 (÷Å¹Ø½Ú - Hip)
+// DM6006 (é«‹å…³èŠ‚ - Hip)
 constexpr float DM6006_POS_MAX    = 12.5f;     // rad
 constexpr float DM6006_VEL_MAX    = 45.0f;     // rad/s
 constexpr float DM6006_TORQUE_MAX = 12.0f;     // Nm
 constexpr float DM6006_KP_MAX     = 500.0f;
 constexpr float DM6006_KD_MAX     = 5.0f;
 
-// DM4340 (´óÍÈThigh/Ğ¡ÍÈCalf/Ï¥¹Ø½ÚKnee)
+// DM4340 (å¤§è…¿Thigh/å°è…¿Calf/è†å…³èŠ‚Knee)
 constexpr float DM4340_POS_MAX    = 12.5f;     // rad
 constexpr float DM4340_VEL_MAX    = 30.0f;     // rad/s
-constexpr float DM4340_TORQUE_MAX = 10.0f;     // Nm
+constexpr float DM4340_TORQUE_MAX = 27.0f;     // Nm
 constexpr float DM4340_KP_MAX     = 500.0f;
 constexpr float DM4340_KD_MAX     = 5.0f;
 
-// DM8006 (õ×¹Ø½Ú - Ankle)
+// DM8006 (è¸å…³èŠ‚ - Ankle)
 constexpr float DM8006_POS_MAX    = 12.5f;     // rad
 constexpr float DM8006_VEL_MAX    = 25.0f;     // rad/s
-constexpr float DM8006_TORQUE_MAX = 24.0f;     // Nm
+constexpr float DM8006_TORQUE_MAX = 40.0f;     // Nm
 constexpr float DM8006_KP_MAX     = 500.0f;
 constexpr float DM8006_KD_MAX     = 5.0f;
 
 //==============================================================================
-// IMU²ÎÊı³£Á¿
+// SPIé€šä¿¡å¸¸é‡
 //==============================================================================
 
-constexpr float IMU_ACCEL_MAX = 160.0f;        // m/s^2 (Ô¼16g)
-constexpr float IMU_GYRO_MAX  = 2000.0f;       // deg/s
-constexpr float IMU_EULER_MAX = 180.0f;        // deg
-
-//==============================================================================
-// SPIÍ¨ĞÅ³£Á¿
-//==============================================================================
-
-// SPIÉè±¸ÅäÖÃ
 constexpr const char* SPI_DEVICE_DEFAULT = "/dev/spidev0.0";
-constexpr uint32_t SPI_SPEED_HZ = 10000000;    // 10 MHz
-constexpr uint8_t SPI_BITS_PER_WORD = 16;      // 16Î»Ä£Ê½ (ÓëSTM32Æ¥Åä)
+constexpr uint32_t SPI_SPEED_HZ      = 10000000;  // 10MHz
+constexpr uint8_t  SPI_BITS_PER_WORD = 16;        // 16ä½æ¨¡å¼
+constexpr uint8_t  SPI_MODE          = 0;         // CPOL=0, CPHA=0
 
-// Êı¾İ»º³åÇø´óĞ¡
-// TX: 10¸öµç»ú * 4²ÎÊı = 40 words (Î»ÖÃ/ËÙ¶È/kp/kd)
-// RX: 10¸öµç»ú * 4²ÎÊı + 2¸öIMU * 10²ÎÊı = 40 + 20 = 60 words
-constexpr size_t CONTROL_DATA_NUM = 40;        // ¿ØÖÆÊı¾İ: 10µç»ú * 4²ÎÊı
-constexpr size_t FEEDBACK_DATA_NUM = 60;       // ·´À¡Êı¾İ: 10µç»ú*4 + 2IMU*10
-constexpr size_t SPI_TX_WORDS = CONTROL_DATA_NUM;
-constexpr size_t SPI_RX_WORDS = FEEDBACK_DATA_NUM;
-constexpr size_t SPI_TX_BYTES = SPI_TX_WORDS * 2;
-constexpr size_t SPI_RX_BYTES = SPI_RX_WORDS * 2;
+// æ•°æ®å¸ƒå±€å¸¸é‡
+constexpr size_t MOTORS_PER_LEG     = 5;          // æ¯è…¿5ä¸ªç”µæœº
+constexpr size_t MOTOR_PARAMS       = 4;          // æ¯ä¸ªç”µæœº4ä¸ªå‚æ•°
+constexpr size_t IMU_PARAMS         = 10;         // æ¯ä¸ªIMU 10ä¸ªå‚æ•°
+constexpr size_t NUM_IMUS           = 2;          // 2ä¸ªIMU
 
-//==============================================================================
-// ÊµÊ±¿ØÖÆ³£Á¿
-//==============================================================================
+// TX: 10ç”µæœº x 4å‚æ•° = 40 words
+constexpr size_t SPI_TX_WORDS       = MOTORS_PER_LEG * 2 * MOTOR_PARAMS;  // 40
+// RX: 40ç”µæœºåé¦ˆ + 20 IMUæ•°æ® = 60 words
+constexpr size_t SPI_RX_WORDS       = SPI_TX_WORDS + NUM_IMUS * IMU_PARAMS;  // 60
 
-constexpr uint32_t CONTROL_PERIOD_US = 1000;   // 1ms¿ØÖÆÖÜÆÚ
-constexpr uint32_t CONTROL_FREQ_HZ   = 1000;   // 1kHz¿ØÖÆÆµÂÊ
-constexpr uint64_t SPI_PERIOD_US     = 1000;   // SPIÍ¨ĞÅÖÜÆÚ (Óë¿ØÖÆÖÜÆÚÏàÍ¬)
+constexpr size_t CONTROL_DATA_NUM   = SPI_TX_WORDS;   // 40
+constexpr size_t FEEDBACK_DATA_NUM  = SPI_RX_WORDS;   // 60
 
 //==============================================================================
-// ÊµÊ±Ïß³ÌÅäÖÃ
+// å®æ—¶çº¿ç¨‹å¸¸é‡
 //==============================================================================
 
-// Ïß³ÌÓÅÏÈ¼¶ (SCHED_FIFO, 1-99, Ô½¸ßÓÅÏÈ¼¶Ô½¸ß)
-constexpr int RT_PRIORITY_MAX     = 99;
-constexpr int RT_PRIORITY_SPI     = 90;        // SPIÍ¨ĞÅÏß³Ì (×î¸ß)
-constexpr int RT_PRIORITY_CONTROL = 80;        // ¿ØÖÆÏß³Ì
-constexpr int RT_PRIORITY_LOGGING = 20;        // ÈÕÖ¾Ïß³Ì (×îµÍ)
+constexpr int RT_PRIORITY_MAX  = 99;    // SCHED_FIFOæœ€å¤§ä¼˜å…ˆçº§
+constexpr int RT_PRIORITY_SPI  = 90;    // SPIé€šä¿¡çº¿ç¨‹ä¼˜å…ˆçº§
+constexpr int RT_PRIORITY_MAIN = 80;    // ä¸»æ§åˆ¶çº¿ç¨‹ä¼˜å…ˆçº§
 
-// CPUºËĞÄ°ó¶¨ (ODroid-C4ÓĞ4¸ö´óºË+2¸öĞ¡ºË)
-constexpr int CPU_CORE_SPI     = 3;            // SPIÏß³Ì°ó¶¨µ½ºËĞÄ3
-constexpr int CPU_CORE_CONTROL = 2;            // ¿ØÖÆÏß³Ì°ó¶¨µ½ºËĞÄ2
-constexpr int CPU_CORE_MAIN    = 0;            // Ö÷Ïß³Ì°ó¶¨µ½ºËĞÄ0
+constexpr int CPU_CORE_SPI     = 2;     // SPIçº¿ç¨‹ç»‘å®šæ ¸å¿ƒ
+constexpr int CPU_CORE_MAIN    = 3;     // ä¸»çº¿ç¨‹ç»‘å®šæ ¸å¿ƒ
 
 //==============================================================================
-// Ê±¼ä¹¤¾ßº¯Êı
+// æ§åˆ¶å‘¨æœŸå¸¸é‡
 //==============================================================================
 
-/**
- * @brief »ñÈ¡µ±Ç°Ê±¼ä (Î¢Ãë)
- */
+constexpr uint32_t CONTROL_FREQ_HZ   = 1000;      // 1kHzæ§åˆ¶é¢‘ç‡
+constexpr uint32_t CONTROL_PERIOD_US = 1000000 / CONTROL_FREQ_HZ;  // 1000us
+constexpr uint32_t SPI_PERIOD_US     = CONTROL_PERIOD_US;          // SPIå‘¨æœŸ=æ§åˆ¶å‘¨æœŸ
+
+//==============================================================================
+// å·¥å…·å‡½æ•°
+//==============================================================================
+
 inline uint64_t get_time_us() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return static_cast<uint64_t>(ts.tv_sec) * 1000000ULL +
            static_cast<uint64_t>(ts.tv_nsec) / 1000ULL;
+}
+
+inline uint64_t get_time_ns() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return static_cast<uint64_t>(ts.tv_sec) * 1000000000ULL +
+           static_cast<uint64_t>(ts.tv_nsec);
 }
 
 } // namespace odroid

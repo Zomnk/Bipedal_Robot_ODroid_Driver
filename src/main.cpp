@@ -1,11 +1,11 @@
 /**
  * @file main.cpp
- * @brief ODroid»úÆ÷ÈËÇı¶¯Ö÷³ÌĞò
+ * @brief ODroidæœºå™¨äººé©±åŠ¨ä¸»ç¨‹åº
  * @author Zomnk
  * @date 2026-02-01
  *
- * ±àÒë: mkdir build && cd build && cmake .. && make
- * ÔËĞĞ: sudo ./robot_driver
+ * ç¼–è¯‘: mkdir build && cd build && cmake .. && make
+ * è¿è¡Œ: sudo ./robot_driver
  */
 
 #include <cstdio>
@@ -27,7 +27,7 @@ void signal_handler(int sig) {
 }
 
 int main(int argc, char* argv[]) {
-    // ½âÎö²ÎÊı
+    // è§£æå‚æ•°
     SPIConfig spi_config;
     if (argc > 1) {
         spi_config.device = argv[1];
@@ -40,20 +40,20 @@ int main(int argc, char* argv[]) {
     LOG_INFO("    SPI Communication with STM32");
     LOG_INFO("===========================================");
 
-    // ĞÅºÅ´¦Àí
+    // ä¿¡å·å¤„ç†
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    // ´´½¨»úÆ÷ÈË½Ó¿Ú
+    // åˆ›å»ºæœºå™¨äººæ¥å£
     RobotInterface robot;
 
-    // ³õÊ¼»¯
+    // åˆå§‹åŒ–
     if (!robot.init(spi_config)) {
         LOG_FATAL("Failed to initialize robot interface");
         return 1;
     }
 
-    // Æô¶¯
+    // å¯åŠ¨
     if (!robot.start()) {
         LOG_FATAL("Failed to start robot interface");
         return 1;
@@ -61,26 +61,26 @@ int main(int argc, char* argv[]) {
 
     LOG_INFO("Robot driver running. Press Ctrl+C to stop.");
 
-    // Ö÷Ñ­»· - ¼à¿ØºÍ×´Ì¬´òÓ¡
+    // ä¸»å¾ªç¯ - ç›‘æ§å’ŒçŠ¶æ€æ‰“å°
     Timer stats_timer;
     while (g_running && robot.is_running()) {
-        // Ã¿5Ãë´òÓ¡Ò»´ÎÍ³¼ÆĞÅÏ¢
+        // æ¯5ç§’æ‰“å°ä¸€æ¬¡ç»Ÿè®¡ä¿¡æ¯
         if (stats_timer.elapsed_sec() >= 5.0) {
             robot.print_stats();
             stats_timer.reset();
         }
 
-        // »ñÈ¡·´À¡Êı¾İ (Ê¾Àı)
+        // è·å–åé¦ˆæ•°æ® (ç¤ºä¾‹)
         RobotFeedback fb;
         if (DataHub::instance().has_new_feedback()) {
             DataHub::instance().get_feedback(fb);
-            // ÕâÀï¿ÉÒÔÌí¼ÓÊı¾İ´¦ÀíÂß¼­
+            // è¿™é‡Œå¯ä»¥æ·»åŠ æ•°æ®å¤„ç†é€»è¾‘
         }
 
-        sleep_ms(100);  // Ö÷Ñ­»·²»ĞèÒª¸ßÆµÂÊ
+        sleep_ms(100);  // ä¸»å¾ªç¯ä¸éœ€è¦é«˜é¢‘ç‡
     }
 
-    // Í£Ö¹
+    // åœæ­¢
     robot.stop();
 
     LOG_INFO("Robot driver stopped");
