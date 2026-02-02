@@ -135,12 +135,12 @@ public:
         uint8_t tx_buf[transfer_bytes] = {0};
         uint8_t rx_buf[transfer_bytes] = {0};
         
-        // 发送时: STM32 SPI 16位模式接收, MSB first
-        // 所以发送顺序是: [高字节, 低字节]
+        // 发送时: STM32 16位模式接收，实际测试显示是 LSB first
+        // 所以发送顺序是: [低字节, 高字节]
         for (size_t i = 0; i < SPI_TX_WORDS; ++i) {
             uint16_t val = tx_buffer.data[i];
-            tx_buf[i * 2]     = (val >> 8) & 0xFF;  // 高字节先发
-            tx_buf[i * 2 + 1] = val & 0xFF;         // 低字节后发
+            tx_buf[i * 2]     = val & 0xFF;         // 低字节先发
+            tx_buf[i * 2 + 1] = (val >> 8) & 0xFF;  // 高字节后发
         }
         // 剩余部分 (40-59 words) 保持为0
         
