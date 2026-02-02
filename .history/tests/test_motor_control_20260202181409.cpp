@@ -125,6 +125,7 @@ int main() {
     uint64_t last_switch_time = get_time_us();
     uint64_t last_print_time = get_time_us();
     const uint64_t print_interval_us = 500000;  // 每500ms打印一次
+    int print_count = 0;  // 计数器，用于间隔打印原始数据
 
     LOG_INFO("开始控制循环...");
     LOG_INFO("");
