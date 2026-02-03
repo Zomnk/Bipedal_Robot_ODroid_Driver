@@ -112,10 +112,18 @@ int main(int argc, char** argv) {
             RobotCommand cmd{};
             cmd.timestamp_us = get_time_us();
             
-            // 控制参数（与test_motor_control.cpp保持一致）
-            const float kp = 1.0f;
-            const float kd = 0.4f;
+            // 检测标定模式：dq_exp[0] == -999.0 表示进入标定模式
+            // 使用预留字段dq_exp作为标志，避免影响实际控制变量
+            bool calibration_mode = (action_from_jetson.dq_exp[0] == -999.0f);
+            
+            // 控制参数：标定模式下kp=kd=0实现完全卸力
+            const float kp = calibration_mode ? 0.0f : 1.0f;
+            const float kd = calibration_mode ? 0.0f : 0.4f;
             const float velocity = 0.0f;
+            
+            if (calibration_mode && action_recv_count % 100 == 1) {
+                LOG_INFO("[标定模式] 所有电机扭矩已卸载 (kp=0, kd=0)");
+            }
             
             // 左腿5个电机
             cmd.left_leg.yaw.position = action_from_jetson.q_exp[0];
