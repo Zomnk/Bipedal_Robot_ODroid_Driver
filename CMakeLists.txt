@@ -72,6 +72,10 @@ target_link_libraries(test_rt_timing robot_driver_lib)
 add_executable(test_jetson_comm tests/test_jetson_comm.cpp)
 target_link_libraries(test_jetson_comm robot_driver_lib)
 
+# 测试程序 - 完整数据流测试 (Jetson-ODroid-STM32)
+add_executable(test_full_loop tests/test_full_loop.cpp)
+target_link_libraries(test_full_loop robot_driver_lib)
+
 # 安装
 install(TARGETS robot_driver DESTINATION bin)
 install(DIRECTORY scripts/ DESTINATION bin
