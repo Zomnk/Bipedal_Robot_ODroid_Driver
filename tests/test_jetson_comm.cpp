@@ -57,10 +57,11 @@ void print_response(const JetsonResponse& resp) {
 }
 
 // ============================================================================
-// 测试1: 基础UDP收发测试
+// 测试1: 基础UDP收发测试（简化版，仅验证消息传输）
 // ============================================================================
 void test_basic_udp(const char* jetson_ip, int port) {
-    LOG_INFO("=== 测试1: 基础UDP收发 ===");
+    LOG_INFO("=== 测试1: 简化UDP消息传输测试 ===");
+    LOG_INFO("目标: 验证UDP消息是否能正确收发，不涉及推理");
     
     UDPConfig config;
     config.jetson_ip = jetson_ip;
@@ -74,63 +75,101 @@ void test_basic_udp(const char* jetson_ip, int port) {
     }
     
     LOG_INFO("开始UDP通信测试, 按Ctrl+C退出");
+    LOG_INFO("Request size: %zu bytes", sizeof(JetsonRequest));
+    LOG_INFO("Response size: %zu bytes", sizeof(JetsonResponse));
     
     uint64_t last_print_time = 0;
     uint64_t send_count = 0;
     uint64_t recv_count = 0;
+    uint64_t loop_count = 0;
     
     while (g_running) {
-        // 构造测试数据
+        // 构造简单测试数据（使用递增序列便于验证）
         JetsonRequest request;
         request.trigger = 1.0f;
-        request.command[0] = 0.5f;  // vx
-        request.command[1] = 0.0f;  // vy
-        request.command[2] = 0.0f;  // yaw_rate
         
-        // 模拟IMU数据
-        float t = get_time_us() / 1000000.0f;
-        request.eu_ang[0] = 0.1f * std::sin(t);  // roll
-        request.eu_ang[1] = 0.05f * std::cos(t); // pitch
-        request.eu_ang[2] = 0.0f;                // yaw
+        // 使用固定测试值
+        request.command[0] = 1.0f + loop_count * 0.01f;  // vx (递增)
+        request.command[1] = 2.0f;  // vy
+        request.command[2] = 3.0f;  // yaw_rate
+        request.command[3] = 4.0f;  // reserved
         
-        request.omega[0] = 0.1f * std::cos(t);
-        request.omega[1] = -0.05f * std::sin(t);
-        request.omega[2] = 0.0f;
+        // 姿态数据（固定值）
+        request.eu_ang[0] = 0.1f;  // roll
+        request.eu_ang[1] = 0.2f;  // pitch
+        request.eu_ang[2] = 0.3f;  // yaw
         
-        // 模拟关节数据
+        // 角速度（固定值）
+        request.omega[0] = 1.1f;
+        request.omega[1] = 1.2f;
+        request.omega[2] = 1.3f;
+        
+        // 加速度（固定值）
+        request.acc[0] = 2.1f;
+        request.acc[1] = 2.2f;
+        request.acc[2] = 2.3f;
+        
+        // 关节数据（使用简单递增序列）
         for (int i = 0; i < NUM_JOINTS; i++) {
-            request.q[i] = 0.1f * std::sin(t + i * 0.3f);
-            request.dq[i] = 0.1f * std::cos(t + i * 0.3f);
-            request.tau[i] = 0.0f;
-            request.init_pos[i] = 0.0f;
+            request.q[i] = (float)(i + 1) * 0.1f;
+            request.dq[i] = (float)(i + 1) * 0.2f;
+            request.tau[i] = (float)(i + 1) * 0.3f;
+            request.init_pos[i] = (float)(i + 1) * 0.05f;
         }
         
         // 发送
-        if (udp.send(request) > 0) {
+        int sent = udp.send(request);
+        if (sent > 0) {
             send_count++;
         }
         
         // 接收
         JetsonResponse response;
-        if (udp.receive(response) > 0) {
+        int recvd = udp.receive(response);
+        if (recvd > 0) {
             recv_count++;
         }
+        
+        loop_count++;
         
         // 每500ms打印一次状态
         uint64_t now = get_time_us();
         if (now - last_print_time >= 500000) {
-            LOG_INFO("TX: %lu, RX: %lu, Connected: %s", 
-                     send_count, recv_count, 
-                     udp.is_connected() ? "Yes" : "No");
+            LOG_INFO("[状态] Loop: %lu, TX: %lu, RX: %lu, 连接: %s", 
+                     loop_count, send_count, recv_count, 
+                     udp.is_connected() ? "是" : "否");
+            
+            // 打印最后发送的Request
+            LOG_INFO("[发送] trigger=%.1f, cmd=[%.2f,%.2f,%.2f,%.2f]",
+                     request.trigger,
+                     request.command[0], request.command[1], 
+                     request.command[2], request.command[3]);
+            LOG_INFO("       姿态=[%.3f,%.3f,%.3f], 角速度=[%.2f,%.2f,%.2f]",
+                     request.eu_ang[0], request.eu_ang[1], request.eu_ang[2],
+                     request.omega[0], request.omega[1], request.omega[2]);
+            LOG_INFO("       q[0-4]=[%.2f,%.2f,%.2f,%.2f,%.2f]",
+                     request.q[0], request.q[1], request.q[2], request.q[3], request.q[4]);
+            
+            // 打印最后接收的Response
             if (recv_count > 0) {
-                print_response(udp.get_last_response());
+                JetsonResponse last_resp = udp.get_last_response();
+                LOG_INFO("[接收] q_exp[0-4]=[%.3f,%.3f,%.3f,%.3f,%.3f]",
+                         last_resp.q_exp[0], last_resp.q_exp[1], 
+                         last_resp.q_exp[2], last_resp.q_exp[3], last_resp.q_exp[4]);
+                LOG_INFO("       q_exp[5-9]=[%.3f,%.3f,%.3f,%.3f,%.3f]",
+                         last_resp.q_exp[5], last_resp.q_exp[6], 
+                         last_resp.q_exp[7], last_resp.q_exp[8], last_resp.q_exp[9]);
+            } else {
+                LOG_WARN("       尚未接收到Jetson响应");
             }
+            LOG_INFO("");
             last_print_time = now;
         }
         
         usleep(2000);  // 500Hz
     }
     
+    LOG_INFO("\n=== 测试统计 ===");
     udp.print_stats();
     udp.close();
 }
@@ -288,7 +327,8 @@ int main(int argc, char** argv) {
     LOG_INFO("");
     
     // 解析命令行参数
-    const char* jetson_ip = "192.168.1.10";
+    const char* odroid_ip = "192.168.5.159";
+    const char* jetson_ip = "192.168.5.141";
     int port = 10000;
     int test_mode = 1;
     
@@ -302,6 +342,7 @@ int main(int argc, char** argv) {
         test_mode = atoi(argv[3]);
     }
     
+    LOG_INFO("ODroid IP: %s", odroid_ip);
     LOG_INFO("Jetson IP: %s", jetson_ip);
     LOG_INFO("Port: %d", port);
     LOG_INFO("Test mode: %d", test_mode);
