@@ -179,14 +179,16 @@ int main(int argc, char** argv) {
             JetsonRequest obs_to_jetson;
             
             // 角速度 - 微雪IMU (imu[1])
-            obs_to_jetson.omega[0] = feedback.imu[1].gyro[0] * M_PI / 180.0f;  // deg/s -> rad/s
-            obs_to_jetson.omega[1] = feedback.imu[1].gyro[1] * M_PI / 180.0f;
-            obs_to_jetson.omega[2] = feedback.imu[1].gyro[2] * M_PI / 180.0f;
+            // 注意：STM32已经输出rad/s，无需再次转换
+            obs_to_jetson.omega[0] = feedback.imu[1].gyro[0];  // rad/s (已转换)
+            obs_to_jetson.omega[1] = feedback.imu[1].gyro[1];  // rad/s (已转换)
+            obs_to_jetson.omega[2] = feedback.imu[1].gyro[2];  // rad/s (已转换)
             
             // 欧拉角姿态 - 微雪IMU (imu[1])
-            obs_to_jetson.eu_ang[0] = feedback.imu[1].euler[0];  // Roll
-            obs_to_jetson.eu_ang[1] = feedback.imu[1].euler[1];  // Pitch
-            obs_to_jetson.eu_ang[2] = feedback.imu[1].euler[2];  // Yaw
+            // 注意：STM32已经输出rad，无需再次转换
+            obs_to_jetson.eu_ang[0] = feedback.imu[1].euler[0];  // Roll (rad)
+            obs_to_jetson.eu_ang[1] = feedback.imu[1].euler[1];  // Pitch (rad)
+            obs_to_jetson.eu_ang[2] = feedback.imu[1].euler[2];  // Yaw (rad)
             
             // 关节位置 (10维)
             obs_to_jetson.q[0] = feedback.left_leg.yaw.position;
