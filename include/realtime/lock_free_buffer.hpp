@@ -112,9 +112,12 @@ public:
      * @brief 写入最新值 (生产者调用)
      */
     void write(const T& item) {
-        buffer_[write_index_.load(std::memory_order_relaxed)] = item;
-        write_index_.store(1 - write_index_.load(std::memory_order_relaxed), 
-                          std::memory_order_release);
+        // 先获取当前写入索引
+        int current_write = write_index_.load(std::memory_order_relaxed);
+        // 写入数据到当前缓冲区
+        buffer_[current_write] = item;
+        // 原子地切换到另一个缓冲区
+        write_index_.store(1 - current_write, std::memory_order_release);
         has_value_.store(true, std::memory_order_release);
     }
     
@@ -128,8 +131,9 @@ public:
             return false;
         }
         
-        // 读取非写入的那个缓冲区
-        item = buffer_[1 - write_index_.load(std::memory_order_acquire)];
+        // 读取非写入索引的缓冲区（确保读取完整数据）
+        int read_index = 1 - write_index_.load(std::memory_order_acquire);
+        item = buffer_[read_index];
         return true;
     }
     

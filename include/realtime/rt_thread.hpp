@@ -106,12 +106,15 @@ private:
             
             last_time = now;
             
-            // 执行任务
-            if (task_) {
+            // 执行任务前再次检查 running_ 状态
+            if (running_ && task_) {
                 task_();
             }
             
-            // 等待下一个周期
+            // 等待下一个周期前检查是否需要退出
+            if (!running_) {
+                break;
+            }
             timer.wait();
         }
     }

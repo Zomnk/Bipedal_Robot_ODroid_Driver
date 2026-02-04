@@ -180,10 +180,8 @@ int main(int argc, char* argv[]) {
     while (g_running && robot.is_running()) {
         // ===== 数据桥接：STM32 <-> Jetson =====
         RobotFeedback feedback;
-        bool got_feedback = robot.get_feedback(feedback);
-        
-        if (got_feedback) {
-            // 1. 无条件发送观测数据给 Jetson（主动建立连接）
+        if (robot.get_feedback(feedback)) {
+            // 1. 发送观测数据给 Jetson（有有效数据时才发送）
             jetson.send_observation(feedback, user_command);
             send_count++;
             
@@ -201,12 +199,8 @@ int main(int argc, char* argv[]) {
                 bridge_count++;
                 recv_count++;
             }
-        } else {
-            // 即使没有反馈，也发送一个空的观测数据保持连接
-            RobotFeedback empty_feedback{};
-            jetson.send_observation(empty_feedback, user_command);
-            send_count++;
         }
+        // 注意：不再发送空数据，减少无效网络流量
         
         // 每1秒打印一次详细状态信息
         if (stats_timer.elapsed_sec() >= 1.0) {
@@ -278,7 +272,8 @@ int main(int argc, char* argv[]) {
         }
 
         loop_count++;
-        usleep(2000);  // 2ms (500Hz) - 与 test_full_loop 保持一致
+        usleep(10000);  // 10ms (100Hz) - 降低主循环频率，减少CPU占用
+        // 注意：数据桥接由 JetsonInterface 的接收线程驱动，主循环不需要高频
     }
 
     // ========== 清理退出 ==========
