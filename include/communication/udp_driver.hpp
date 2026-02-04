@@ -19,6 +19,8 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
+#include <chrono>
+#include <future>
 #include <functional>
 
 #include <sys/socket.h>
@@ -181,10 +183,16 @@ public:
             last_response_ = response;
             last_response_time_us_ = get_time_us();
         } else if (received < 0) {
-            if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                stats_.rx_errors++;
+            // 检查是否为临时错误（无数据可读）
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return 0;  // 无数据可读，正常情况
             }
-            return 0;  // 无数据可读
+            // 其他错误（如socket已关闭）
+            if (errno == EBADF || errno == ECONNRESET || errno == ENOTCONN) {
+                return -1;  // Socket错误，应退出
+            }
+            stats_.rx_errors++;
+            return 0;  // 其他错误，暂不退出
         }
         
         return received;
@@ -242,9 +250,30 @@ public:
      * @brief 停止异步接收线程
      */
     void stop() {
+        if (!running_) {
+            return;  // 已经停止
+        }
+        
         running_ = false;
+        
+        // 强制关闭socket，让阻塞的recvfrom()立即返回EBADF错误
+        if (socket_fd_ >= 0) {
+            shutdown(socket_fd_, SHUT_RDWR);
+        }
+        
+        // 等待线程退出（最多1秒）
         if (recv_thread_.joinable()) {
-            recv_thread_.join();
+            // 使用future来实现带超时的join
+            auto join_future = std::async(std::launch::async, [this]() {
+                if (recv_thread_.joinable()) {
+                    recv_thread_.join();
+                }
+            });
+            
+            if (join_future.wait_for(std::chrono::seconds(1)) == std::future_status::timeout) {
+                LOG_WARN("UDP receive thread did not exit in 1 second, detaching...");
+                recv_thread_.detach();
+            }
         }
     }
 
@@ -304,14 +333,23 @@ private:
     void receive_thread_func() {
         JetsonResponse response;
         while (running_) {
-            if (receive(response) > 0) {
+            int recv_result = receive(response);
+            
+            if (recv_result > 0) {
                 std::lock_guard<std::mutex> lock(callback_mutex_);
                 if (response_callback_) {
                     response_callback_(response);
                 }
+            } else if (recv_result < 0) {
+                // Socket错误，可能已关闭
+                if (!running_) {
+                    break;  // 立即退出
+                }
             }
+            
             usleep(500);  // 2000Hz轮询
         }
+        LOG_DEBUG("UDP receive thread exited");
     }
 
 private:

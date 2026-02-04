@@ -285,9 +285,13 @@ int main(int argc, char* argv[]) {
     LOG_INFO("============================================");
     LOG_INFO("正在停止系统...");
     
+    // 先停止UDP通信（可能会卡在线程join）
+    LOG_INFO("正在停止UDP通信...");
     jetson.stop();
     LOG_INFO("✓ UDP通信已停止");
     
+    // 再停止SPI通信
+    LOG_INFO("正在停止SPI通信...");
     robot.stop();
     LOG_INFO("✓ SPI通信已停止");
     
