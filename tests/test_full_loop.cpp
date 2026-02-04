@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
             const float velocity = 0.0f;
             
             if (calibration_mode && action_recv_count % 100 == 1) {
-                LOG_INFO("[标定模式] 关节 #" << calibrating_joint_id << " 扭矩已卸载 (kp=0, kd=0)");
+                LOG_INFO("[标定模式] 关节 #%d 扭矩已卸载 (kp=0, kd=0)", calibrating_joint_id);
             }
             
             // 左腿5个电机 - 只对当前标定的关节卸载扭矩
