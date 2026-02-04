@@ -190,30 +190,45 @@ int main(int argc, char* argv[]) {
     Timer total_timer;  // 用于记录总运行时间
     uint64_t loop_count = 0;
     uint64_t bridge_count = 0;  // 数据桥接次数
+    uint64_t send_count = 0;    // 发送计数
+    uint64_t recv_count = 0;    // 接收计数
     float user_command[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // vx, vy, yaw_rate, reserved
+
+    LOG_INFO("开始数据桥接主循环...");
 
     // ========== 主循环 - 数据桥接和监控 ==========
     while (g_running && robot.is_running()) {
         // ===== 数据桥接：STM32 <-> Jetson =====
         RobotFeedback feedback;
-        if (robot.get_feedback(feedback)) {
-            // 发送观测数据给 Jetson
+        bool got_feedback = robot.get_feedback(feedback);
+        
+        if (got_feedback) {
+            // 1. 无条件发送观测数据给 Jetson（主动建立连接）
             jetson.send_observation(feedback, user_command);
+            send_count++;
             
-            // 获取 Jetson 的动作指令
+            // 2. 尝试获取 Jetson 的动作指令
             RobotCommand cmd;
             if (jetson.get_action(cmd)) {
-                // 转发给 STM32 控制电机
+                // 3. 转发给 STM32 控制电机
                 robot.send_command(cmd);
                 bridge_count++;
+                recv_count++;
             }
+        } else {
+            // 即使没有反馈，也发送一个空的观测数据保持连接
+            RobotFeedback empty_feedback{};
+            jetson.send_observation(empty_feedback, user_command);
+            send_count++;
         }
         
         // 每1秒打印一次详细状态信息
         if (stats_timer.elapsed_sec() >= 1.0) {
             LOG_INFO("========================================");
-            LOG_INFO("运行时间: %.1f 秒 | 主循环: %lu | 数据桥接: %lu", 
-                     total_timer.elapsed_sec(), loop_count, bridge_count);
+            LOG_INFO("运行时间: %.1f 秒 | 主循环: %lu", 
+                     total_timer.elapsed_sec(), loop_count);
+            LOG_INFO("通信计数: 发送=%lu, 接收=%lu, 桥接=%lu", 
+                     send_count, recv_count, bridge_count);
             
             // 获取机器人反馈数据
             RobotFeedback feedback;
