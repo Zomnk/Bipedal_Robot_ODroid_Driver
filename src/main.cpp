@@ -160,29 +160,10 @@ int main(int argc, char* argv[]) {
     }
     LOG_INFO("✓ UDP线程已启动 (500Hz)");
 
-    // ========== 等待连接建立 ==========
-    LOG_INFO("============================================");
-    LOG_INFO("等待Jetson连接...");
-    LOG_INFO("提示: 在Jetson端运行相应程序");
-    LOG_INFO("============================================");
-
-    // 等待首次收到Jetson数据（最多等待30秒）
-    bool jetson_connected = false;
-    Timer wait_timer;
-    while (!jetson_connected && g_running && wait_timer.elapsed_sec() < 30.0) {
-        if (jetson.is_connected()) {
-            jetson_connected = true;
-            LOG_INFO("✓ Jetson已连接！");
-        }
-        sleep_ms(100);
-    }
-
-    if (!jetson_connected && g_running) {
-        LOG_WARN("30秒内未收到Jetson数据，继续运行但可能无法正常工作");
-    }
-
     // ========== 开始主循环 ==========
     LOG_INFO("============================================");
+    LOG_INFO("开始数据交换，等待Jetson连接...");
+    LOG_INFO("提示: 在Jetson端运行相应程序");
     LOG_INFO("系统运行中... 按 Ctrl+C 退出");
     LOG_INFO("============================================");
 
@@ -192,9 +173,8 @@ int main(int argc, char* argv[]) {
     uint64_t bridge_count = 0;  // 数据桥接次数
     uint64_t send_count = 0;    // 发送计数
     uint64_t recv_count = 0;    // 接收计数
+    bool first_connection_logged = false;  // 首次连接标志
     float user_command[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // vx, vy, yaw_rate, reserved
-
-    LOG_INFO("开始数据桥接主循环...");
 
     // ========== 主循环 - 数据桥接和监控 ==========
     while (g_running && robot.is_running()) {
@@ -210,6 +190,12 @@ int main(int argc, char* argv[]) {
             // 2. 尝试获取 Jetson 的动作指令
             RobotCommand cmd;
             if (jetson.get_action(cmd)) {
+                // 首次连接成功时打印日志
+                if (!first_connection_logged) {
+                    LOG_INFO("✓ Jetson已连接！数据交换已建立");
+                    first_connection_logged = true;
+                }
+                
                 // 3. 转发给 STM32 控制电机
                 robot.send_command(cmd);
                 bridge_count++;
