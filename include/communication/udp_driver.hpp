@@ -76,6 +76,23 @@ public:
             return false;
         }
 
+        // 绑定本地端口（重要：必须绑定才能接收数据！）
+        struct sockaddr_in local_addr;
+        memset(&local_addr, 0, sizeof(local_addr));
+        local_addr.sin_family = AF_INET;
+        local_addr.sin_addr.s_addr = INADDR_ANY;  // 监听所有网卡
+        local_addr.sin_port = htons(config_.jetson_port);  // 使用相同端口
+        
+        if (bind(socket_fd_, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
+            LOG_ERROR("Failed to bind UDP socket to port %d: %s", 
+                     config_.jetson_port, strerror(errno));
+            ::close(socket_fd_);
+            socket_fd_ = -1;
+            return false;
+        }
+        
+        LOG_INFO("UDP socket bound to local port: %d", config_.jetson_port);
+
         // 设置目标地址 (Jetson)
         memset(&server_addr_, 0, sizeof(server_addr_));
         server_addr_.sin_family = AF_INET;
