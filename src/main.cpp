@@ -125,8 +125,8 @@ int main(int argc, char* argv[]) {
     
     // 配置Jetson接口
     JetsonInterfaceConfig jetson_config;
-    jetson_config.udp_config.server_ip = jetson_ip;
-    jetson_config.udp_config.server_port = port;
+    jetson_config.udp_config.jetson_ip = jetson_ip;
+    jetson_config.udp_config.jetson_port = port;
     jetson_config.comm_rate_hz = 500;  // 500Hz
     
     if (!jetson.init(jetson_config)) {
@@ -186,6 +186,7 @@ int main(int argc, char* argv[]) {
     LOG_INFO("============================================");
 
     Timer stats_timer;
+    Timer total_timer;  // 用于记录总运行时间
     uint64_t loop_count = 0;
 
     // ========== 主循环 - 监控和统计 ==========
@@ -193,7 +194,7 @@ int main(int argc, char* argv[]) {
         // 每1秒打印一次详细状态信息
         if (stats_timer.elapsed_sec() >= 1.0) {
             LOG_INFO("========================================");
-            LOG_INFO("运行时间: %.1f 秒 | 主循环: %lu", stats_timer.total_elapsed_sec(), loop_count);
+            LOG_INFO("运行时间: %.1f 秒 | 主循环: %lu", total_timer.elapsed_sec(), loop_count);
             
             // 获取机器人反馈数据
             RobotFeedback feedback;
@@ -273,7 +274,7 @@ int main(int argc, char* argv[]) {
     // 打印最终统计
     LOG_INFO("============================================");
     LOG_INFO("最终统计信息:");
-    LOG_INFO("  总运行时间: %.2f 秒", stats_timer.total_elapsed_sec());
+    LOG_INFO("  总运行时间: %.2f 秒", total_timer.elapsed_sec());
     LOG_INFO("  主循环总数: %lu", loop_count);
     LOG_INFO("----------------------------------------");
     LOG_INFO("SPI通信最终统计:");
