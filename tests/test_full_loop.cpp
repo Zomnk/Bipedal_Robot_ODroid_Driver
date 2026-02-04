@@ -113,69 +113,70 @@ int main(int argc, char** argv) {
             cmd.timestamp_us = get_time_us();
             
             // 检测标定模式：dq_exp[0] == -999.0 表示进入标定模式
-            // 使用预留字段dq_exp作为标志，避免影响实际控制变量
+            // tau_exp[0] 存储当前正在标定的关节ID (0-9)
             bool calibration_mode = (action_from_jetson.dq_exp[0] == -999.0f);
+            int calibrating_joint_id = calibration_mode ? static_cast<int>(action_from_jetson.tau_exp[0]) : -1;
             
-            // 控制参数：标定模式下kp=kd=0实现完全卸力
-            const float kp = calibration_mode ? 0.0f : 1.0f;
-            const float kd = calibration_mode ? 0.0f : 0.4f;
+            // 控制参数：默认正常控制增益
+            const float kp_normal = 1.0f;
+            const float kd_normal = 0.4f;
             const float velocity = 0.0f;
             
             if (calibration_mode && action_recv_count % 100 == 1) {
-                LOG_INFO("[标定模式] 所有电机扭矩已卸载 (kp=0, kd=0)");
+                LOG_INFO("[标定模式] 关节 #" << calibrating_joint_id << " 扭矩已卸载 (kp=0, kd=0)");
             }
             
-            // 左腿5个电机
+            // 左腿5个电机 - 只对当前标定的关节卸载扭矩
             cmd.left_leg.yaw.position = action_from_jetson.q_exp[0];
             cmd.left_leg.yaw.velocity = velocity;
-            cmd.left_leg.yaw.kp = kp;
-            cmd.left_leg.yaw.kd = kd;
+            cmd.left_leg.yaw.kp = (calibrating_joint_id == 0) ? 0.0f : kp_normal;
+            cmd.left_leg.yaw.kd = (calibrating_joint_id == 0) ? 0.0f : kd_normal;
             
             cmd.left_leg.roll.position = action_from_jetson.q_exp[1];
             cmd.left_leg.roll.velocity = velocity;
-            cmd.left_leg.roll.kp = kp;
-            cmd.left_leg.roll.kd = kd;
+            cmd.left_leg.roll.kp = (calibrating_joint_id == 1) ? 0.0f : kp_normal;
+            cmd.left_leg.roll.kd = (calibrating_joint_id == 1) ? 0.0f : kd_normal;
             
             cmd.left_leg.pitch.position = action_from_jetson.q_exp[2];
             cmd.left_leg.pitch.velocity = velocity;
-            cmd.left_leg.pitch.kp = kp;
-            cmd.left_leg.pitch.kd = kd;
+            cmd.left_leg.pitch.kp = (calibrating_joint_id == 2) ? 0.0f : kp_normal;
+            cmd.left_leg.pitch.kd = (calibrating_joint_id == 2) ? 0.0f : kd_normal;
             
             cmd.left_leg.knee.position = action_from_jetson.q_exp[3];
             cmd.left_leg.knee.velocity = velocity;
-            cmd.left_leg.knee.kp = kp;
-            cmd.left_leg.knee.kd = kd;
+            cmd.left_leg.knee.kp = (calibrating_joint_id == 3) ? 0.0f : kp_normal;
+            cmd.left_leg.knee.kd = (calibrating_joint_id == 3) ? 0.0f : kd_normal;
             
             cmd.left_leg.ankle.position = action_from_jetson.q_exp[4];
             cmd.left_leg.ankle.velocity = velocity;
-            cmd.left_leg.ankle.kp = kp;
-            cmd.left_leg.ankle.kd = kd;
+            cmd.left_leg.ankle.kp = (calibrating_joint_id == 4) ? 0.0f : kp_normal;
+            cmd.left_leg.ankle.kd = (calibrating_joint_id == 4) ? 0.0f : kd_normal;
             
             // 右腿5个电机
             cmd.right_leg.yaw.position = action_from_jetson.q_exp[5];
             cmd.right_leg.yaw.velocity = velocity;
-            cmd.right_leg.yaw.kp = kp;
-            cmd.right_leg.yaw.kd = kd;
+            cmd.right_leg.yaw.kp = (calibrating_joint_id == 5) ? 0.0f : kp_normal;
+            cmd.right_leg.yaw.kd = (calibrating_joint_id == 5) ? 0.0f : kd_normal;
             
             cmd.right_leg.roll.position = action_from_jetson.q_exp[6];
             cmd.right_leg.roll.velocity = velocity;
-            cmd.right_leg.roll.kp = kp;
-            cmd.right_leg.roll.kd = kd;
+            cmd.right_leg.roll.kp = (calibrating_joint_id == 6) ? 0.0f : kp_normal;
+            cmd.right_leg.roll.kd = (calibrating_joint_id == 6) ? 0.0f : kd_normal;
             
             cmd.right_leg.pitch.position = action_from_jetson.q_exp[7];
             cmd.right_leg.pitch.velocity = velocity;
-            cmd.right_leg.pitch.kp = kp;
-            cmd.right_leg.pitch.kd = kd;
+            cmd.right_leg.pitch.kp = (calibrating_joint_id == 7) ? 0.0f : kp_normal;
+            cmd.right_leg.pitch.kd = (calibrating_joint_id == 7) ? 0.0f : kd_normal;
             
             cmd.right_leg.knee.position = action_from_jetson.q_exp[8];
             cmd.right_leg.knee.velocity = velocity;
-            cmd.right_leg.knee.kp = kp;
-            cmd.right_leg.knee.kd = kd;
+            cmd.right_leg.knee.kp = (calibrating_joint_id == 8) ? 0.0f : kp_normal;
+            cmd.right_leg.knee.kd = (calibrating_joint_id == 8) ? 0.0f : kd_normal;
             
             cmd.right_leg.ankle.position = action_from_jetson.q_exp[9];
             cmd.right_leg.ankle.velocity = velocity;
-            cmd.right_leg.ankle.kp = kp;
-            cmd.right_leg.ankle.kd = kd;
+            cmd.right_leg.ankle.kp = (calibrating_joint_id == 9) ? 0.0f : kp_normal;
+            cmd.right_leg.ankle.kd = (calibrating_joint_id == 9) ? 0.0f : kd_normal;
             
             robot.send_command(cmd);
         }
