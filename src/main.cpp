@@ -19,6 +19,7 @@
 #include <csignal>
 #include <cstring>
 #include <cmath>
+#include <unistd.h>
 
 #include "common/logger.hpp"
 #include "common/time_utils.hpp"
@@ -188,13 +189,31 @@ int main(int argc, char* argv[]) {
     Timer stats_timer;
     Timer total_timer;  // 用于记录总运行时间
     uint64_t loop_count = 0;
+    uint64_t bridge_count = 0;  // 数据桥接次数
+    float user_command[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // vx, vy, yaw_rate, reserved
 
-    // ========== 主循环 - 监控和统计 ==========
+    // ========== 主循环 - 数据桥接和监控 ==========
     while (g_running && robot.is_running()) {
+        // ===== 数据桥接：STM32 <-> Jetson =====
+        RobotFeedback feedback;
+        if (robot.get_feedback(feedback)) {
+            // 发送观测数据给 Jetson
+            jetson.send_observation(feedback, user_command);
+            
+            // 获取 Jetson 的动作指令
+            RobotCommand cmd;
+            if (jetson.get_action(cmd)) {
+                // 转发给 STM32 控制电机
+                robot.send_command(cmd);
+                bridge_count++;
+            }
+        }
+        
         // 每1秒打印一次详细状态信息
         if (stats_timer.elapsed_sec() >= 1.0) {
             LOG_INFO("========================================");
-            LOG_INFO("运行时间: %.1f 秒 | 主循环: %lu", total_timer.elapsed_sec(), loop_count);
+            LOG_INFO("运行时间: %.1f 秒 | 主循环: %lu | 数据桥接: %lu", 
+                     total_timer.elapsed_sec(), loop_count, bridge_count);
             
             // 获取机器人反馈数据
             RobotFeedback feedback;
@@ -258,7 +277,7 @@ int main(int argc, char* argv[]) {
         }
 
         loop_count++;
-        sleep_ms(100);  // 主循环不需要高频率
+        usleep(2000);  // 2ms (500Hz) - 与 test_full_loop 保持一致
     }
 
     // ========== 清理退出 ==========
