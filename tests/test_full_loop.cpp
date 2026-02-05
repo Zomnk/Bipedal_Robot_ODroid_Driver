@@ -185,21 +185,39 @@ int main(int argc, char** argv) {
         RobotFeedback feedback;
         if (robot.get_feedback(feedback)) {
             // ===== 4. 构造观测量发送给Jetson (Request消息) =====
+            // 必须严格按照Jetson端MsgRequest的字段顺序赋值！
+            // 顺序: trigger, command[4], eu_ang[3], omega[3], acc[3], 
+            //       q[10], dq[10], tau[10], init_pos[10]
             JetsonRequest obs_to_jetson;
             
-            // 角速度 - 微雪IMU (imu[1])
-            // 注意：STM32已经输出rad/s，无需再次转换
-            obs_to_jetson.omega[0] = feedback.imu[1].gyro[0];  // rad/s (已转换)
-            obs_to_jetson.omega[1] = feedback.imu[1].gyro[1];  // rad/s (已转换)
-            obs_to_jetson.omega[2] = feedback.imu[1].gyro[2];  // rad/s (已转换)
+            // 1. 触发标志 (1个float)
+            obs_to_jetson.trigger = 1.0f;
             
-            // 欧拉角姿态 - 微雪IMU (imu[1])
+            // 2. 控制指令 (4个float: vx, vy, yaw_rate, reserved)
+            // 测试模式下使用零速度指令
+            obs_to_jetson.command[0] = 0.0f;  // vx
+            obs_to_jetson.command[1] = 0.0f;  // vy
+            obs_to_jetson.command[2] = 0.0f;  // yaw_rate
+            obs_to_jetson.command[3] = 0.0f;  // reserved
+            
+            // 3. 欧拉角姿态 (3个float: roll, pitch, yaw) - 微雪IMU (imu[1])
             // 注意：STM32已经输出rad，无需再次转换
             obs_to_jetson.eu_ang[0] = feedback.imu[1].euler[0];  // Roll (rad)
             obs_to_jetson.eu_ang[1] = feedback.imu[1].euler[1];  // Pitch (rad)
             obs_to_jetson.eu_ang[2] = feedback.imu[1].euler[2];  // Yaw (rad)
             
-            // 关节位置 (10维)
+            // 4. 角速度 (3个float: wx, wy, wz) - 微雪IMU (imu[1])
+            // 注意：STM32已经输出rad/s，无需再次转换
+            obs_to_jetson.omega[0] = feedback.imu[1].gyro[0];  // rad/s (已转换)
+            obs_to_jetson.omega[1] = feedback.imu[1].gyro[1];  // rad/s (已转换)
+            obs_to_jetson.omega[2] = feedback.imu[1].gyro[2];  // rad/s (已转换)
+            
+            // 5. 加速度 (3个float: ax, ay, az) - 微雪IMU
+            obs_to_jetson.acc[0] = feedback.imu[1].accel[0];
+            obs_to_jetson.acc[1] = feedback.imu[1].accel[1];
+            obs_to_jetson.acc[2] = feedback.imu[1].accel[2];
+            
+            // 6. 关节位置 (10个float)
             obs_to_jetson.q[0] = feedback.left_leg.yaw.position;
             obs_to_jetson.q[1] = feedback.left_leg.roll.position;
             obs_to_jetson.q[2] = feedback.left_leg.pitch.position;
@@ -211,7 +229,7 @@ int main(int argc, char** argv) {
             obs_to_jetson.q[8] = feedback.right_leg.knee.position;
             obs_to_jetson.q[9] = feedback.right_leg.ankle.position;
             
-            // 关节速度 (10维)
+            // 7. 关节速度 (10个float)
             obs_to_jetson.dq[0] = feedback.left_leg.yaw.velocity;
             obs_to_jetson.dq[1] = feedback.left_leg.roll.velocity;
             obs_to_jetson.dq[2] = feedback.left_leg.pitch.velocity;
@@ -223,24 +241,7 @@ int main(int argc, char** argv) {
             obs_to_jetson.dq[8] = feedback.right_leg.knee.velocity;
             obs_to_jetson.dq[9] = feedback.right_leg.ankle.velocity;
             
-            // 上次动作 (从上次接收的Jetson action)
-            for (int i = 0; i < NUM_JOINTS; i++) {
-                obs_to_jetson.init_pos[i] = last_action[i];
-            }
-            
-            // 其他字段（测试用）
-            obs_to_jetson.trigger = 1.0f;
-            obs_to_jetson.command[0] = 0.0f;  // vx
-            obs_to_jetson.command[1] = 0.0f;  // vy
-            obs_to_jetson.command[2] = 0.0f;  // yaw_rate
-            obs_to_jetson.command[3] = 0.0f;
-            
-            // 加速度 - 微雪IMU
-            obs_to_jetson.acc[0] = feedback.imu[1].accel[0];
-            obs_to_jetson.acc[1] = feedback.imu[1].accel[1];
-            obs_to_jetson.acc[2] = feedback.imu[1].accel[2];
-            
-            // 力矩反馈
+            // 8. 力矩反馈 (10个float)
             obs_to_jetson.tau[0] = feedback.left_leg.yaw.torque;
             obs_to_jetson.tau[1] = feedback.left_leg.roll.torque;
             obs_to_jetson.tau[2] = feedback.left_leg.pitch.torque;
@@ -251,6 +252,11 @@ int main(int argc, char** argv) {
             obs_to_jetson.tau[7] = feedback.right_leg.pitch.torque;
             obs_to_jetson.tau[8] = feedback.right_leg.knee.torque;
             obs_to_jetson.tau[9] = feedback.right_leg.ankle.torque;
+            
+            // 9. 上次动作 (10个float) - 从上次接收的Jetson action填充
+            for (int i = 0; i < NUM_JOINTS; i++) {
+                obs_to_jetson.init_pos[i] = last_action[i];
+            }
             
             // 发送给Jetson
             int sent_bytes = udp.send(obs_to_jetson);
