@@ -57,7 +57,7 @@ void print_usage(const char* prog) {
     printf("  jetson_ip: Jetson设备的IP地址\n");
     printf("  port:      UDP端口号 (默认: 10000)\n");
     printf("\n示例:\n");
-    printf("  %s 192.168.5.141 10000\n", prog);
+    printf("  %s 192.168.137.5 10000\n", prog);
 }
 
 /**

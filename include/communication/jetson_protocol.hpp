@@ -25,7 +25,7 @@ namespace odroid {
 constexpr int NUM_JOINTS = 10;           // 双足机器人10个关节 (5*2腿)
 constexpr int NUM_CMD = 4;               // 控制指令数 (vx, vy, yaw_rate, ...)
 constexpr int JETSON_DEFAULT_PORT = 10000;
-constexpr const char* JETSON_DEFAULT_IP = "192.168.1.10";  // Jetson默认IP
+constexpr const char* JETSON_DEFAULT_IP = "192.168.137.5";  // Jetson默认IP
 
 //==============================================================================
 // 消息结构定义 (与sim2sim_lcm/udp_publish_tinker.h一致)

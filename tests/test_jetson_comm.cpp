@@ -327,8 +327,8 @@ int main(int argc, char** argv) {
     LOG_INFO("");
     
     // 解析命令行参数
-    const char* odroid_ip = "192.168.5.159";
-    const char* jetson_ip = "192.168.5.141";
+    const char* odroid_ip = "192.168.137.4";
+    const char* jetson_ip = "192.168.137.5";
     int port = 10000;
     int test_mode = 1;
     
