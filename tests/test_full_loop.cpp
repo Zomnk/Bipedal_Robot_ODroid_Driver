@@ -281,28 +281,61 @@ int main(int argc, char** argv) {
         // 每500ms打印统计信息
         uint64_t now = get_time_us();
         if (now - last_print_time >= 500000) {
+            LOG_INFO("========================================");
             LOG_INFO("[统计 #%lu] 接收Action: %lu, 发送Obs: %lu, UDP连接: %s",
                      loop_count, action_recv_count, obs_send_count,
                      udp.is_connected() ? "是" : "否");
+            LOG_INFO("========================================");
             
+            // ===== 打印Jetson发送的Action =====
             if (action_recv_count > 0) {
-                LOG_INFO("  最后接收的Action[0-4]: [%.3f, %.3f, %.3f, %.3f, %.3f]",
-                         last_action[0], last_action[1], last_action[2], 
-                         last_action[3], last_action[4]);
+                LOG_INFO("【Jetson动作指令】");
+                LOG_INFO("  左腿动作: Yaw=%.3f, Roll=%.3f, Pitch=%.3f, Knee=%.3f, Ankle=%.3f",
+                         last_action[0], last_action[1], last_action[2], last_action[3], last_action[4]);
+                LOG_INFO("  右腿动作: Yaw=%.3f, Roll=%.3f, Pitch=%.3f, Knee=%.3f, Ankle=%.3f",
+                         last_action[5], last_action[6], last_action[7], last_action[8], last_action[9]);
+                LOG_INFO("");
             }
             
-            // 打印电机反馈示例（左腿）
+            // ===== 打印电机反馈（位置、速度、力矩）=====
             if (robot.get_feedback(feedback)) {
-                LOG_INFO("  左腿电机位置: [%.3f, %.3f, %.3f, %.3f, %.3f]",
-                         feedback.left_leg.yaw.position,
-                         feedback.left_leg.roll.position,
-                         feedback.left_leg.pitch.position,
-                         feedback.left_leg.knee.position,
-                         feedback.left_leg.ankle.position);
-                LOG_INFO("  微雪IMU: 欧拉角=[%.3f, %.3f, %.3f], 角速度=[%.2f, %.2f, %.2f] deg/s",
-                         feedback.imu[1].euler[0], feedback.imu[1].euler[1], feedback.imu[1].euler[2],
+                LOG_INFO("【左腿电机反馈】");
+                LOG_INFO("  Yaw   - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.left_leg.yaw.position, feedback.left_leg.yaw.velocity, feedback.left_leg.yaw.torque);
+                LOG_INFO("  Roll  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.left_leg.roll.position, feedback.left_leg.roll.velocity, feedback.left_leg.roll.torque);
+                LOG_INFO("  Pitch - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.left_leg.pitch.position, feedback.left_leg.pitch.velocity, feedback.left_leg.pitch.torque);
+                LOG_INFO("  Knee  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.left_leg.knee.position, feedback.left_leg.knee.velocity, feedback.left_leg.knee.torque);
+                LOG_INFO("  Ankle - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.left_leg.ankle.position, feedback.left_leg.ankle.velocity, feedback.left_leg.ankle.torque);
+                LOG_INFO("");
+                
+                LOG_INFO("【右腿电机反馈】");
+                LOG_INFO("  Yaw   - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.right_leg.yaw.position, feedback.right_leg.yaw.velocity, feedback.right_leg.yaw.torque);
+                LOG_INFO("  Roll  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.right_leg.roll.position, feedback.right_leg.roll.velocity, feedback.right_leg.roll.torque);
+                LOG_INFO("  Pitch - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.right_leg.pitch.position, feedback.right_leg.pitch.velocity, feedback.right_leg.pitch.torque);
+                LOG_INFO("  Knee  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.right_leg.knee.position, feedback.right_leg.knee.velocity, feedback.right_leg.knee.torque);
+                LOG_INFO("  Ankle - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
+                         feedback.right_leg.ankle.position, feedback.right_leg.ankle.velocity, feedback.right_leg.ankle.torque);
+                LOG_INFO("");
+                
+                LOG_INFO("【IMU反馈数据】(微雪10轴)");
+                LOG_INFO("  欧拉角 - Roll:% 7.3f°, Pitch:% 7.3f°, Yaw:% 7.3f°",
+                         feedback.imu[1].euler[0] * 180.0f / M_PI,
+                         feedback.imu[1].euler[1] * 180.0f / M_PI,
+                         feedback.imu[1].euler[2] * 180.0f / M_PI);
+                LOG_INFO("  角速度 - ωx:% 7.3f rad/s, ωy:% 7.3f rad/s, ωz:% 7.3f rad/s",
                          feedback.imu[1].gyro[0], feedback.imu[1].gyro[1], feedback.imu[1].gyro[2]);
+                LOG_INFO("  加速度 - ax:% 7.3f g, ay:% 7.3f g, az:% 7.3f g",
+                         feedback.imu[1].accel[0], feedback.imu[1].accel[1], feedback.imu[1].accel[2]);
             }
+            LOG_INFO("========================================");
             LOG_INFO("");
             last_print_time = now;
         }
