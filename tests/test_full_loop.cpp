@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     LOG_INFO("");
     
     // 解析命令行参数
-    const char* jetson_ip = "192.168.137.5";
+    const char* jetson_ip = "192.168.5.141";
     int port = 10000;
     
     if (argc >= 2) {
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
             int calibrating_joint_id = calibration_mode ? static_cast<int>(action_from_jetson.tau_exp[0]) : -1;
             
             // 控制参数：默认正常控制增益
-            const float kp_normal = 1.0f;
+            const float kp_normal = 8.0f;
             const float kd_normal = 0.4f;
             const float velocity = 0.0f;
             
