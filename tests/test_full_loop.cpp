@@ -126,8 +126,9 @@ int main(int argc, char** argv) {
             };
             const float kd_gains[NUM_JOINTS] = {
                 0.4f, 0.4f, 0.4f, 0.4f, 0.4f,  // 左腿
-                0.4f, 0.4f, 0.4f, 0.4f, 0.4f
+                0.4f, 0.4f, 0.4f, 0.4f, 0.4f   // 右腿
             };
+            const float velocity = 0.0f;
 
             // 使用独立的Kp/Kd值，标定模式时卸载对应关节扭矩
             cmd.left_leg.yaw.position = action_from_jetson.q_exp[0];
@@ -179,15 +180,7 @@ int main(int argc, char** argv) {
             cmd.right_leg.ankle.position = action_from_jetson.q_exp[9];
             cmd.right_leg.ankle.velocity = velocity;
             cmd.right_leg.ankle.kp = (calibrating_joint_id == 9) ? 0.0f : kp_gains[9];
-            cmd.right_leg.ankle.kd = (calibrating_joint_id == 9) ? 0.0f : kd_gains[9]
-            cmd.right_leg.knee.velocity = velocity;
-            cmd.right_leg.knee.kp = (calibrating_joint_id == 8) ? 0.0f : kp_normal;
-            cmd.right_leg.knee.kd = (calibrating_joint_id == 8) ? 0.0f : kd_normal;
-            
-            cmd.right_leg.ankle.position = action_from_jetson.q_exp[9];
-            cmd.right_leg.ankle.velocity = velocity;
-            cmd.right_leg.ankle.kp = (calibrating_joint_id == 9) ? 0.0f : kp_normal;
-            cmd.right_leg.ankle.kd = (calibrating_joint_id == 9) ? 0.0f : kd_normal;
+            cmd.right_leg.ankle.kd = (calibrating_joint_id == 9) ? 0.0f : kd_gains[9];
             
             robot.send_command(cmd);
         }
