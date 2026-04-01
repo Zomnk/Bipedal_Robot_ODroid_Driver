@@ -134,10 +134,20 @@ public:
         DataHub::instance().set_command(robot_cmd);
     }
     
+    /**
+     * @brief 获取SPI发送缓冲区引用
+     */
+    const SPITxBuffer& get_tx_buffer() const { return DataHub::instance().get_tx_buffer(); }
+
+    /**
+     * @brief 获取SPI接收缓冲区引用
+     */
+    const SPIRxBuffer& get_rx_buffer() const { return DataHub::instance().get_rx_buffer(); }
+
     //==========================================================================
     // 状态查询接口
     //==========================================================================
-    
+
     /**
      * @brief 检查是否已初始化
      */
