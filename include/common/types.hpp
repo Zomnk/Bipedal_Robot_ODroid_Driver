@@ -67,6 +67,7 @@ struct IMUFeedback {
     float accel[3] = {0};     // 加速度 (g) [X, Y, Z]
     float euler[3] = {0};     // 欧拉角 (rad) [roll, pitch, yaw]
     float temperature = 0.0f; // 温度 (C)
+    float quat[4] = {1.0f, 0.0f, 0.0f, 0.0f}; // 四元数 [w, x, y, z]
 };
 
 /**

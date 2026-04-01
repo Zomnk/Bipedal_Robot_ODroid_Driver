@@ -51,6 +51,8 @@ void print_imu_feedback(const IMUFeedback& imu, const char* name) {
     LOG_INFO("  Euler: [%+7.4f, %+7.4f, %+7.4f] rad",
              imu.euler[0], imu.euler[1], imu.euler[2]);
     LOG_INFO("  Temp:  %.1f C", imu.temperature);
+    LOG_INFO("  Quat:  [%+7.4f, %+7.4f, %+7.4f, %+7.4f] (w,x,y,z)",
+             imu.quat[0], imu.quat[1], imu.quat[2], imu.quat[3]);
 }
 
 // 设置腿部所有电机的控制参数

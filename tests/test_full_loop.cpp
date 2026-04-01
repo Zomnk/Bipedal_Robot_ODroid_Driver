@@ -262,6 +262,12 @@ int main(int argc, char** argv) {
                 obs_to_jetson.init_pos[i] = last_action[i];
             }
             
+            // 10. 四元数 (Waveshare IMU)
+            obs_to_jetson.quat[0] = feedback.imu[1].quat[0];  // w
+            obs_to_jetson.quat[1] = feedback.imu[1].quat[1];  // x
+            obs_to_jetson.quat[2] = feedback.imu[1].quat[2];  // y
+            obs_to_jetson.quat[3] = feedback.imu[1].quat[3];  // z
+            
             // 发送给Jetson
             int sent_bytes = udp.send(obs_to_jetson);
             if (sent_bytes > 0) {
@@ -297,35 +303,35 @@ int main(int argc, char** argv) {
                 LOG_INFO("");
             }
             
-            // ===== 打印电机反馈（位置、速度、力矩）=====
+            // ===== 打印电机反馈（位置、速度、力矩、温度）=====
             if (robot.get_feedback(feedback)) {
                 LOG_INFO("【左腿电机反馈】");
-                LOG_INFO("  Yaw   - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.left_leg.yaw.position, feedback.left_leg.yaw.velocity, feedback.left_leg.yaw.torque);
-                LOG_INFO("  Roll  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.left_leg.roll.position, feedback.left_leg.roll.velocity, feedback.left_leg.roll.torque);
-                LOG_INFO("  Pitch - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.left_leg.pitch.position, feedback.left_leg.pitch.velocity, feedback.left_leg.pitch.torque);
-                LOG_INFO("  Knee  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.left_leg.knee.position, feedback.left_leg.knee.velocity, feedback.left_leg.knee.torque);
-                LOG_INFO("  Ankle - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.left_leg.ankle.position, feedback.left_leg.ankle.velocity, feedback.left_leg.ankle.torque);
+                LOG_INFO("  Yaw   - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.left_leg.yaw.position, feedback.left_leg.yaw.velocity, feedback.left_leg.yaw.torque, feedback.left_leg.yaw.temperature);
+                LOG_INFO("  Roll  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.left_leg.roll.position, feedback.left_leg.roll.velocity, feedback.left_leg.roll.torque, feedback.left_leg.roll.temperature);
+                LOG_INFO("  Pitch - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.left_leg.pitch.position, feedback.left_leg.pitch.velocity, feedback.left_leg.pitch.torque, feedback.left_leg.pitch.temperature);
+                LOG_INFO("  Knee  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.left_leg.knee.position, feedback.left_leg.knee.velocity, feedback.left_leg.knee.torque, feedback.left_leg.knee.temperature);
+                LOG_INFO("  Ankle - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.left_leg.ankle.position, feedback.left_leg.ankle.velocity, feedback.left_leg.ankle.torque, feedback.left_leg.ankle.temperature);
                 LOG_INFO("");
                 
                 LOG_INFO("【右腿电机反馈】");
-                LOG_INFO("  Yaw   - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.right_leg.yaw.position, feedback.right_leg.yaw.velocity, feedback.right_leg.yaw.torque);
-                LOG_INFO("  Roll  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.right_leg.roll.position, feedback.right_leg.roll.velocity, feedback.right_leg.roll.torque);
-                LOG_INFO("  Pitch - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.right_leg.pitch.position, feedback.right_leg.pitch.velocity, feedback.right_leg.pitch.torque);
-                LOG_INFO("  Knee  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.right_leg.knee.position, feedback.right_leg.knee.velocity, feedback.right_leg.knee.torque);
-                LOG_INFO("  Ankle - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm",
-                         feedback.right_leg.ankle.position, feedback.right_leg.ankle.velocity, feedback.right_leg.ankle.torque);
+                LOG_INFO("  Yaw   - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.right_leg.yaw.position, feedback.right_leg.yaw.velocity, feedback.right_leg.yaw.torque, feedback.right_leg.yaw.temperature);
+                LOG_INFO("  Roll  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.right_leg.roll.position, feedback.right_leg.roll.velocity, feedback.right_leg.roll.torque, feedback.right_leg.roll.temperature);
+                LOG_INFO("  Pitch - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.right_leg.pitch.position, feedback.right_leg.pitch.velocity, feedback.right_leg.pitch.torque, feedback.right_leg.pitch.temperature);
+                LOG_INFO("  Knee  - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.right_leg.knee.position, feedback.right_leg.knee.velocity, feedback.right_leg.knee.torque, feedback.right_leg.knee.temperature);
+                LOG_INFO("  Ankle - 位置:% 7.3f rad, 速度:% 7.3f rad/s, 力矩:% 7.3f Nm, 温度:% 5.1f°C",
+                         feedback.right_leg.ankle.position, feedback.right_leg.ankle.velocity, feedback.right_leg.ankle.torque, feedback.right_leg.ankle.temperature);
                 LOG_INFO("");
                 
-                LOG_INFO("【IMU反馈数据】(微雪10轴)");
+                LOG_INFO("【IMU反馈数据】(微雪14轴)");
                 LOG_INFO("  欧拉角 - Roll:% 7.3f°, Pitch:% 7.3f°, Yaw:% 7.3f°",
                          feedback.imu[1].euler[0] * 180.0f / M_PI,
                          feedback.imu[1].euler[1] * 180.0f / M_PI,
@@ -334,6 +340,9 @@ int main(int argc, char** argv) {
                          feedback.imu[1].gyro[0], feedback.imu[1].gyro[1], feedback.imu[1].gyro[2]);
                 LOG_INFO("  加速度 - ax:% 7.3f g, ay:% 7.3f g, az:% 7.3f g",
                          feedback.imu[1].accel[0], feedback.imu[1].accel[1], feedback.imu[1].accel[2]);
+                LOG_INFO("  四元数 - w:% 7.4f, x:% 7.4f, y:% 7.4f, z:% 7.4f",
+                         feedback.imu[1].quat[0], feedback.imu[1].quat[1],
+                         feedback.imu[1].quat[2], feedback.imu[1].quat[3]);
             }
             LOG_INFO("========================================");
             LOG_INFO("");

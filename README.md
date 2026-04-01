@@ -145,14 +145,14 @@ ODroid-C4 → STM32:
 
 | 偏移 | 内容 | 数量 |
 |------|------|------|
-| 0-14 | 左腿5关节 × 3参数 | 15 × uint16 |
-| 15-29 | 右腿5关节 × 3参数 | 15 × uint16 |
-| 30-39 | IMU0数据 | 10 × uint16 |
-| 40-49 | IMU1数据（Waveshare） | 10 × uint16 |
-| 50-59 | 保留 | 10 × uint16 |
+| 0-19 | 左腿5关节 × 4参数 | 20 × uint16 |
+| 20-39 | 右腿5关节 × 4参数 | 20 × uint16 |
+| 40-49 | IMU0 (ICM20602) 数据 | 10 × uint16 |
+| 50-63 | IMU1 (Waveshare) 数据 | 14 × uint16 |
 
-每个关节: [position, velocity, torque]  
-每个IMU: [euler_x, euler_y, euler_z, gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, 保留]
+每个关节: [position, velocity, torque, temperature]  
+每个IMU (ICM20602): [gyro×3, accel×3, euler×3, temp]  
+Waveshare IMU: [gyro×3, accel×3, euler×3, temp, quat_w, quat_x, quat_y, quat_z]
 
 ### UDP通信（ODroid ↔ Jetson）
 
@@ -163,7 +163,7 @@ ODroid-C4 → STM32:
 #### JetsonRequest（观测数据：ODroid → Jetson）
 
 ```cpp
-struct JetsonRequest {  // 216 bytes
+struct JetsonRequest {  // 232 bytes
     float omega[3];      // 角速度 (rad/s)
     float eu_ang[3];     // 欧拉角 (rad)
     float q[10];         // 关节位置 (rad)
@@ -173,6 +173,7 @@ struct JetsonRequest {  // 216 bytes
     float command[4];    // 用户指令 [vx, vy, yaw_rate, 保留]
     float acc[3];        // 加速度 (g)
     float tau[10];       // 力矩反馈 (Nm)
+    float quat[4];       // 四元数 [w, x, y, z] (Waveshare IMU)
 };
 ```
 

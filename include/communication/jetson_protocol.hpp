@@ -46,6 +46,7 @@ struct JetsonRequest {
     float dq[NUM_JOINTS];   // 关节速度 (rad/s)
     float tau[NUM_JOINTS];  // 关节力矩 (Nm)
     float init_pos[NUM_JOINTS];  // 初始位置 (rad)
+    float quat[4];          // 四元数 [w, x, y, z] (Waveshare IMU)
     
     JetsonRequest() {
         memset(this, 0, sizeof(JetsonRequest));

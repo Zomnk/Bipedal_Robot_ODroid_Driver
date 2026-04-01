@@ -249,6 +249,9 @@ int main(int argc, char* argv[]) {
                          feedback.imu[1].gyro[0], feedback.imu[1].gyro[1], feedback.imu[1].gyro[2]);
                 LOG_INFO("  加速度: ax=% 7.3f g, ay=% 7.3f g, az=% 7.3f g",
                          feedback.imu[1].accel[0], feedback.imu[1].accel[1], feedback.imu[1].accel[2]);
+                LOG_INFO("  四元数: w=% 7.4f, x=% 7.4f, y=% 7.4f, z=% 7.4f",
+                         feedback.imu[1].quat[0], feedback.imu[1].quat[1],
+                         feedback.imu[1].quat[2], feedback.imu[1].quat[3]);
             } else {
                 LOG_WARN("未能获取机器人反馈数据");
             }

@@ -65,6 +65,23 @@ int main() {
     rx_buf.data[48] = 32768;  // euler_yaw = 0
     rx_buf.data[49] = 32768;  // temp = 40C (中间值)
 
+    // 模拟Waveshare IMU数据 (索引50-63)
+    // 数据顺序: gyro*3, accel*3, euler*3, temp, quat_w, quat_x, quat_y, quat_z
+    rx_buf.data[50] = 32768;  // gyro_x = 0
+    rx_buf.data[51] = 32768;  // gyro_y = 0
+    rx_buf.data[52] = 32768;  // gyro_z = 0
+    rx_buf.data[53] = 32768;  // accel_x = 0
+    rx_buf.data[54] = 32768;  // accel_y = 0
+    rx_buf.data[55] = 38000;  // accel_z ~= 1g
+    rx_buf.data[56] = 32768;  // euler_roll = 0
+    rx_buf.data[57] = 32768;  // euler_pitch = 0
+    rx_buf.data[58] = 32768;  // euler_yaw = 0
+    rx_buf.data[59] = 32768;  // temp = 40C
+    rx_buf.data[60] = 65535;  // quat_w = 1.0
+    rx_buf.data[61] = 32768;  // quat_x = 0.0
+    rx_buf.data[62] = 32768;  // quat_y = 0.0
+    rx_buf.data[63] = 32768;  // quat_z = 0.0
+
     RobotFeedback fb{};
     Protocol::decode_robot_feedback(rx_buf, fb);
 
@@ -78,6 +95,10 @@ int main() {
              fb.imu[0].accel[0], fb.imu[0].accel[1], fb.imu[0].accel[2]);
     LOG_INFO("   IMU0 euler: [%.3f, %.3f, %.3f] rad",
              fb.imu[0].euler[0], fb.imu[0].euler[1], fb.imu[0].euler[2]);
+    LOG_INFO("   IMU1 (Waveshare) quat: [%.3f, %.3f, %.3f, %.3f]",
+             fb.imu[1].quat[0], fb.imu[1].quat[1],
+             fb.imu[1].quat[2], fb.imu[1].quat[3]);
+    LOG_INFO("   RX缓冲区大小: %zu words", SPI_RX_WORDS);
 
     LOG_INFO("=== SPI通信测试完成 ===");
     return 0;

@@ -117,6 +117,12 @@ void test_basic_udp(const char* jetson_ip, int port) {
             request.init_pos[i] = (float)(i + 1) * 0.05f;
         }
         
+        // 四元数 (w=1, x=y=z=0 单位四元数)
+        request.quat[0] = 1.0f;
+        request.quat[1] = 0.0f;
+        request.quat[2] = 0.0f;
+        request.quat[3] = 0.0f;
+        
         // 发送
         int sent = udp.send(request);
         if (sent > 0) {

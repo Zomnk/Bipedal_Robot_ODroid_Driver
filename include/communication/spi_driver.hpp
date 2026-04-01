@@ -127,9 +127,9 @@ public:
             return false;
         }
         
-        // 传输长度：使用较大值60 words = 120 bytes
-        constexpr size_t transfer_words = SPI_RX_WORDS;  // 60 words
-        constexpr size_t transfer_bytes = transfer_words * 2;  // 120 bytes
+        // 传输长度：使用较大值64 words = 128 bytes
+        constexpr size_t transfer_words = SPI_RX_WORDS;  // 64 words
+        constexpr size_t transfer_bytes = transfer_words * 2;  // 128 bytes
         
         // 准备发送/接收缓冲区
         uint8_t tx_buf[transfer_bytes] = {0};

@@ -51,16 +51,17 @@ constexpr uint8_t  SPI_MODE          = 0;         // CPOL=0, CPHA=0
 // 数据布局常量
 constexpr size_t MOTORS_PER_LEG     = 5;          // 每腿5个电机
 constexpr size_t MOTOR_PARAMS       = 4;          // 每个电机4个参数
-constexpr size_t IMU_PARAMS         = 10;         // 每个IMU 10个参数
+constexpr size_t ICM20602_PARAMS    = 10;         // ICM20602 IMU 参数
+constexpr size_t WAVESHARE_PARAMS   = 14;         // Waveshare IMU 参数 (含四元数)
 constexpr size_t NUM_IMUS           = 2;          // 2个IMU
 
 // TX: 10电机 x 4参数 = 40 words
 constexpr size_t SPI_TX_WORDS       = MOTORS_PER_LEG * 2 * MOTOR_PARAMS;  // 40
-// RX: 40电机反馈 + 20 IMU数据 = 60 words
-constexpr size_t SPI_RX_WORDS       = SPI_TX_WORDS + NUM_IMUS * IMU_PARAMS;  // 60
+// RX: 40电机反馈 + 10 ICM20602 + 14 Waveshare = 64 words
+constexpr size_t SPI_RX_WORDS       = SPI_TX_WORDS + ICM20602_PARAMS + WAVESHARE_PARAMS;  // 64
 
 constexpr size_t CONTROL_DATA_NUM   = SPI_TX_WORDS;   // 40
-constexpr size_t FEEDBACK_DATA_NUM  = SPI_RX_WORDS;   // 60
+constexpr size_t FEEDBACK_DATA_NUM  = SPI_RX_WORDS;   // 64
 
 //==============================================================================
 // 实时线程常量

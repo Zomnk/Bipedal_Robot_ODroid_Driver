@@ -6,10 +6,11 @@
  *
  * 数据布局 (与STM32一致):
  * TX (40 words): [左腿5电机*4参数=20] [右腿5电机*4参数=20]
- * RX (60 words): [左腿5电机*4参数=20] [右腿5电机*4参数=20] [ICM20602*10] [Waveshare*10]
+ * RX (64 words): [左腿5电机*4参数=20] [右腿5电机*4参数=20] [ICM20602*10] [Waveshare*14]
  * 
  * 关节顺序: Yaw(DM6006), Roll(DM4340), Pitch(DM8006), Knee(DM6006), Ankle(DM6006)
- * IMU数据顺序: gyro*3, accel*3, euler*3, temp
+ * ICM20602数据顺序: gyro*3, accel*3, euler*3, temp
+ * Waveshare数据顺序: gyro*3, accel*3, euler*3, temp, quat_w, quat_x, quat_y, quat_z
  */
 
 #ifndef ODROID_COMMUNICATION_PROTOCOL_HPP
@@ -117,8 +118,8 @@ public:
         // 解码ICM20602 IMU (10 words)
         decode_imu_feedback(data, idx, feedback.imu[0]);
 
-        // 解码Waveshare IMU (10 words)
-        decode_imu_feedback(data, idx, feedback.imu[1]);
+        // 解码Waveshare IMU (14 words, 含四元数)
+        decode_imu_feedback_waveshare(data, idx, feedback.imu[1]);
 
         feedback.timestamp_us = get_time_us();
     }
@@ -195,7 +196,7 @@ private:
     }
 
     /**
-     * @brief 解码IMU反馈数据
+     * @brief 解码IMU反馈数据 (ICM20602, 10 words)
      * @note 数据顺序 (与STM32 Pack_Feedback_Data一致):
      *       gyro[3], accel[3], euler[3], temperature
      */
@@ -217,6 +218,37 @@ private:
         
         // 温度 (-20 ~ 100度)
         imu.temperature = decode_range(data[idx++], IMU_TEMP_MIN, IMU_TEMP_MAX);
+    }
+
+    /**
+     * @brief 解码Waveshare IMU反馈数据 (14 words, 含四元数)
+     * @note 数据顺序: gyro[3], accel[3], euler[3], temperature, quat[4]
+     *       四元数顺序: w, x, y, z
+     */
+    static void decode_imu_feedback_waveshare(const uint16_t* data, size_t& idx, IMUFeedback& imu) {
+        // 角速度 (deg/s, 范围+-2000)
+        imu.gyro[0] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
+        imu.gyro[1] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
+        imu.gyro[2] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
+        
+        // 加速度 (g, 范围+-16)
+        imu.accel[0] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
+        imu.accel[1] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
+        imu.accel[2] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
+        
+        // 欧拉角 (rad, 范围+-pi)
+        imu.euler[0] = decode_symmetric(data[idx++], IMU_RPY_MAX);
+        imu.euler[1] = decode_symmetric(data[idx++], IMU_RPY_MAX);
+        imu.euler[2] = decode_symmetric(data[idx++], IMU_RPY_MAX);
+        
+        // 温度 (-20 ~ 100度)
+        imu.temperature = decode_range(data[idx++], IMU_TEMP_MIN, IMU_TEMP_MAX);
+
+        // 四元数 (w, x, y, z, 范围+-1.0)
+        imu.quat[0] = decode_symmetric(data[idx++], 1.0f);  // w
+        imu.quat[1] = decode_symmetric(data[idx++], 1.0f);  // x
+        imu.quat[2] = decode_symmetric(data[idx++], 1.0f);  // y
+        imu.quat[3] = decode_symmetric(data[idx++], 1.0f);  // z
     }
 };
 

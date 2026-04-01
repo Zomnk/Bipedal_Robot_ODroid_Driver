@@ -281,6 +281,12 @@ private:
         request.tau[R_PITCH] = feedback.right_leg.pitch.torque;
         request.tau[R_KNEE]  = feedback.right_leg.knee.torque;
         request.tau[R_ANKLE] = feedback.right_leg.ankle.torque;
+
+        // 四元数 (Waveshare IMU)
+        request.quat[0] = imu.quat[0];  // w
+        request.quat[1] = imu.quat[1];  // x
+        request.quat[2] = imu.quat[2];  // y
+        request.quat[3] = imu.quat[3];  // z
     }
 
     /**
