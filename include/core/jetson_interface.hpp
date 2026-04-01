@@ -234,15 +234,15 @@ private:
         request.eu_ang[1] = imu.euler[1];  // pitch
         request.eu_ang[2] = imu.euler[2];  // yaw
         
-        // 角速度 (deg/s -> rad/s)
-        request.omega[0] = imu.gyro[0] * M_PI / 180.0f;
-        request.omega[1] = imu.gyro[1] * M_PI / 180.0f;
-        request.omega[2] = imu.gyro[2] * M_PI / 180.0f;
+        // 角速度 (rad/s, IMU已转换)
+        request.omega[0] = imu.gyro[0];
+        request.omega[1] = imu.gyro[1];
+        request.omega[2] = imu.gyro[2];
         
-        // 加速度 (g -> m/s^2)
-        request.acc[0] = imu.accel[0] * 9.81f;
-        request.acc[1] = imu.accel[1] * 9.81f;
-        request.acc[2] = imu.accel[2] * 9.81f;
+        // 加速度 (m/s², IMU已转换)
+        request.acc[0] = imu.accel[0];
+        request.acc[1] = imu.accel[1];
+        request.acc[2] = imu.accel[2];
         
         // 左腿关节数据
         request.q[L_YAW]   = feedback.left_leg.yaw.position;

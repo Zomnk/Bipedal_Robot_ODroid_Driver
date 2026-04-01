@@ -44,9 +44,9 @@ void print_leg_feedback(const LegFeedback& leg, const char* leg_name) {
 // 打印IMU反馈信息
 void print_imu_feedback(const IMUFeedback& imu, const char* name) {
     LOG_INFO("--- %s IMU反馈 ---", name);
-    LOG_INFO("  Gyro:  [%+8.2f, %+8.2f, %+8.2f] deg/s",
+    LOG_INFO("  Gyro:  [%+8.2f, %+8.2f, %+8.2f] rad/s",
              imu.gyro[0], imu.gyro[1], imu.gyro[2]);
-    LOG_INFO("  Accel: [%+6.3f, %+6.3f, %+6.3f] g",
+    LOG_INFO("  Accel: [%+6.3f, %+6.3f, %+6.3f] m/s²",
              imu.accel[0], imu.accel[1], imu.accel[2]);
     LOG_INFO("  Euler: [%+7.4f, %+7.4f, %+7.4f] rad",
              imu.euler[0], imu.euler[1], imu.euler[2]);

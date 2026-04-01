@@ -201,12 +201,12 @@ private:
      *       gyro[3], accel[3], euler[3], temperature
      */
     static void decode_imu_feedback(const uint16_t* data, size_t& idx, IMUFeedback& imu) {
-        // 角速度 (deg/s, 范围+-2000)
+        // 角速度 (rad/s, 范围+-2000)
         imu.gyro[0] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         imu.gyro[1] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         imu.gyro[2] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         
-        // 加速度 (g, 范围+-16)
+        // 加速度 (m/s², 范围+-16)
         imu.accel[0] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
         imu.accel[1] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
         imu.accel[2] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
@@ -226,12 +226,12 @@ private:
      *       四元数顺序: w, x, y, z
      */
     static void decode_imu_feedback_waveshare(const uint16_t* data, size_t& idx, IMUFeedback& imu) {
-        // 角速度 (deg/s, 范围+-2000)
+        // 角速度 (rad/s, 范围+-2000)
         imu.gyro[0] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         imu.gyro[1] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         imu.gyro[2] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         
-        // 加速度 (g, 范围+-16)
+        // 加速度 (m/s², 范围+-16)
         imu.accel[0] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
         imu.accel[1] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
         imu.accel[2] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);

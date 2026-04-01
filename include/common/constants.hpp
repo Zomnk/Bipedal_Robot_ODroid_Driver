@@ -86,8 +86,8 @@ constexpr uint32_t SPI_PERIOD_US     = CONTROL_PERIOD_US;          // SPI周期=
 // IMU参数范围 (与STM32保持一致)
 //==============================================================================
 
-constexpr float IMU_GYRO_MAX   = 2000.0f;   // deg/s
-constexpr float IMU_ACCEL_MAX  = 16.0f;     // g
+constexpr float IMU_GYRO_MAX   = 2000.0f;   // rad/s
+constexpr float IMU_ACCEL_MAX  = 16.0f;     // m/s²
 constexpr float IMU_RPY_MAX    = 3.14159f;  // rad (STM32用rad)
 constexpr float IMU_TEMP_MAX   = 100.0f;    // C
 constexpr float IMU_TEMP_MIN   = -20.0f;    // C

@@ -63,8 +63,8 @@ struct LegFeedback {
  * @note 数据顺序: gyro3, accel3, euler3, temp
  */
 struct IMUFeedback {
-    float gyro[3] = {0};      // 角速度 (deg/s) [X, Y, Z]
-    float accel[3] = {0};     // 加速度 (g) [X, Y, Z]
+    float gyro[3] = {0};      // 角速度 (rad/s) [X, Y, Z]
+    float accel[3] = {0};     // 加速度 (m/s²) [X, Y, Z]
     float euler[3] = {0};     // 欧拉角 (rad) [roll, pitch, yaw]
     float temperature = 0.0f; // 温度 (C)
     float quat[4] = {1.0f, 0.0f, 0.0f, 0.0f}; // 四元数 [w, x, y, z]

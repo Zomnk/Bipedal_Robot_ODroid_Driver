@@ -144,7 +144,7 @@ int main() {
 
                 // ICM20602 IMU
                 LOG_INFO("--- ICM20602 IMU反馈 ---");
-                LOG_INFO("  Gyro:  [%+8.2f, %+8.2f, %+8.2f] deg/s",
+                LOG_INFO("  Gyro:  [%+8.2f, %+8.2f, %+8.2f] rad/s",
                          feedback.imu[0].gyro[0], feedback.imu[0].gyro[1], feedback.imu[0].gyro[2]);
                 LOG_INFO("  Accel: [%+6.3f, %+6.3f, %+6.3f] g",
                          feedback.imu[0].accel[0], feedback.imu[0].accel[1], feedback.imu[0].accel[2]);
@@ -155,7 +155,7 @@ int main() {
 
                 // Waveshare IMU (含四元数)
                 LOG_INFO("--- Waveshare IMU反馈 (14 words) ---");
-                LOG_INFO("  Gyro:  [%+8.2f, %+8.2f, %+8.2f] deg/s",
+                LOG_INFO("  Gyro:  [%+8.2f, %+8.2f, %+8.2f] rad/s",
                          feedback.imu[1].gyro[0], feedback.imu[1].gyro[1], feedback.imu[1].gyro[2]);
                 LOG_INFO("  Accel: [%+6.3f, %+6.3f, %+6.3f] g",
                          feedback.imu[1].accel[0], feedback.imu[1].accel[1], feedback.imu[1].accel[2]);
