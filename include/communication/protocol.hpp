@@ -199,24 +199,25 @@ private:
      * @brief 解码IMU反馈数据 (ICM20602, 10 words)
      * @note 数据顺序 (与STM32 Pack_Feedback_Data一致):
      *       gyro[3], accel[3], euler[3], temperature
+     *       单位: gyro=rad/s (±34.91), accel=m/s² (±78.45), euler=rad (±π), temp=°C
      */
     static void decode_imu_feedback(const uint16_t* data, size_t& idx, IMUFeedback& imu) {
-        // 角速度 (rad/s, 范围+-2000)
+        // 角速度 (rad/s, 范围±34.9066 = ±2000deg/s)
         imu.gyro[0] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         imu.gyro[1] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         imu.gyro[2] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         
-        // 加速度 (m/s², 范围+-16)
-        imu.accel[0] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
-        imu.accel[1] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
-        imu.accel[2] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
+        // 加速度 (m/s², 范围±78.4532 = ±8g)
+        imu.accel[0] = decode_symmetric(data[idx++], IMU_ACCEL_ICM);
+        imu.accel[1] = decode_symmetric(data[idx++], IMU_ACCEL_ICM);
+        imu.accel[2] = decode_symmetric(data[idx++], IMU_ACCEL_ICM);
         
-        // 欧拉角 (rad, 范围+-pi)
+        // 欧拉角 (rad, 范围±π)
         imu.euler[0] = decode_symmetric(data[idx++], IMU_RPY_MAX);
         imu.euler[1] = decode_symmetric(data[idx++], IMU_RPY_MAX);
         imu.euler[2] = decode_symmetric(data[idx++], IMU_RPY_MAX);
         
-        // 温度 (-20 ~ 100度)
+        // 温度 (-20 ~ 100°C)
         imu.temperature = decode_range(data[idx++], IMU_TEMP_MIN, IMU_TEMP_MAX);
     }
 
@@ -224,27 +225,28 @@ private:
      * @brief 解码Waveshare IMU反馈数据 (14 words, 含四元数)
      * @note 数据顺序: gyro[3], accel[3], euler[3], temperature, quat[4]
      *       四元数顺序: w, x, y, z
+     *       单位: gyro=rad/s (±34.91), accel=m/s² (±156.91), euler=rad (±π), temp=°C
      */
     static void decode_imu_feedback_waveshare(const uint16_t* data, size_t& idx, IMUFeedback& imu) {
-        // 角速度 (rad/s, 范围+-2000)
+        // 角速度 (rad/s, 范围±34.9066 = ±2000deg/s)
         imu.gyro[0] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         imu.gyro[1] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         imu.gyro[2] = decode_symmetric(data[idx++], IMU_GYRO_MAX);
         
-        // 加速度 (m/s², 范围+-16)
-        imu.accel[0] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
-        imu.accel[1] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
-        imu.accel[2] = decode_symmetric(data[idx++], IMU_ACCEL_MAX);
+        // 加速度 (m/s², 范围±156.9064 = ±16g)
+        imu.accel[0] = decode_symmetric(data[idx++], IMU_ACCEL_WAVE);
+        imu.accel[1] = decode_symmetric(data[idx++], IMU_ACCEL_WAVE);
+        imu.accel[2] = decode_symmetric(data[idx++], IMU_ACCEL_WAVE);
         
-        // 欧拉角 (rad, 范围+-pi)
+        // 欧拉角 (rad, 范围±π)
         imu.euler[0] = decode_symmetric(data[idx++], IMU_RPY_MAX);
         imu.euler[1] = decode_symmetric(data[idx++], IMU_RPY_MAX);
         imu.euler[2] = decode_symmetric(data[idx++], IMU_RPY_MAX);
         
-        // 温度 (-20 ~ 100度)
+        // 温度 (-20 ~ 100°C)
         imu.temperature = decode_range(data[idx++], IMU_TEMP_MIN, IMU_TEMP_MAX);
 
-        // 四元数 (w, x, y, z, 范围+-1.0)
+        // 四元数 (w, x, y, z, 范围±1.0)
         imu.quat[0] = decode_symmetric(data[idx++], 1.0f);  // w
         imu.quat[1] = decode_symmetric(data[idx++], 1.0f);  // x
         imu.quat[2] = decode_symmetric(data[idx++], 1.0f);  // y

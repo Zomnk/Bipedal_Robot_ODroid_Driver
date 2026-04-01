@@ -83,14 +83,19 @@ constexpr uint32_t CONTROL_PERIOD_US = 1000000 / CONTROL_FREQ_HZ;  // 1000us
 constexpr uint32_t SPI_PERIOD_US     = CONTROL_PERIOD_US;          // SPI周期=控制周期
 
 //==============================================================================
-// IMU参数范围 (与STM32保持一致)
+// IMU参数范围 (与STM32保持一致, 使用SI单位)
 //==============================================================================
 
-constexpr float IMU_GYRO_MAX   = 2000.0f;   // rad/s
-constexpr float IMU_ACCEL_MAX  = 16.0f;     // m/s²
-constexpr float IMU_RPY_MAX    = 3.14159f;  // rad (STM32用rad)
-constexpr float IMU_TEMP_MAX   = 100.0f;    // C
-constexpr float IMU_TEMP_MIN   = -20.0f;    // C
+// Gyro: ±2000 deg/s → ±34.9066 rad/s
+constexpr float IMU_GYRO_MAX     = 34.9066f;    // rad/s (= 2000 * π/180)
+
+// Accel: ICM20602 ±8g → ±78.4532 m/s², Waveshare ±16g → ±156.9064 m/s²
+constexpr float IMU_ACCEL_ICM    = 78.4532f;    // m/s² (= 8 * 9.80665)
+constexpr float IMU_ACCEL_WAVE   = 156.9064f;   // m/s² (= 16 * 9.80665)
+
+constexpr float IMU_RPY_MAX      = 3.14159f;    // rad
+constexpr float IMU_TEMP_MAX     = 100.0f;      // °C
+constexpr float IMU_TEMP_MIN     = -20.0f;      // °C
 
 //==============================================================================
 // 工具函数
