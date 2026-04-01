@@ -146,7 +146,7 @@ int main() {
                 LOG_INFO("--- ICM20602 IMU反馈 ---");
                 LOG_INFO("  Gyro:  [%+8.2f, %+8.2f, %+8.2f] rad/s",
                          feedback.imu[0].gyro[0], feedback.imu[0].gyro[1], feedback.imu[0].gyro[2]);
-                LOG_INFO("  Accel: [%+6.3f, %+6.3f, %+6.3f] g",
+                LOG_INFO("  Accel: [%+6.3f, %+6.3f, %+6.3f] m/s²",
                          feedback.imu[0].accel[0], feedback.imu[0].accel[1], feedback.imu[0].accel[2]);
                 LOG_INFO("  Euler: [%+7.4f, %+7.4f, %+7.4f] rad",
                          feedback.imu[0].euler[0], feedback.imu[0].euler[1], feedback.imu[0].euler[2]);
@@ -157,7 +157,7 @@ int main() {
                 LOG_INFO("--- Waveshare IMU反馈 (14 words) ---");
                 LOG_INFO("  Gyro:  [%+8.2f, %+8.2f, %+8.2f] rad/s",
                          feedback.imu[1].gyro[0], feedback.imu[1].gyro[1], feedback.imu[1].gyro[2]);
-                LOG_INFO("  Accel: [%+6.3f, %+6.3f, %+6.3f] g",
+                LOG_INFO("  Accel: [%+6.3f, %+6.3f, %+6.3f] m/s²",
                          feedback.imu[1].accel[0], feedback.imu[1].accel[1], feedback.imu[1].accel[2]);
                 LOG_INFO("  Euler: [%+7.4f, %+7.4f, %+7.4f] rad",
                          feedback.imu[1].euler[0], feedback.imu[1].euler[1], feedback.imu[1].euler[2]);
