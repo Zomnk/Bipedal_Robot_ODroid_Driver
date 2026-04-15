@@ -125,8 +125,8 @@ int main(int argc, char** argv) {
                 5.0f, 20.0f, 5.0f, 5.0f, 5.0f   // 右腿
             };
             const float kd_gains[NUM_JOINTS] = {
-                0.5f, 0.5f, 0.5f, 0.5f, 0.5f,  // 左腿
-                0.5f, 0.5f, 0.5f, 0.5f, 0.5f   // 右腿
+                1.0f, 1.0f, 1.0f, 1.0f, 1.0f,  // 左腿
+                1.0f, 1.0f, 1.0f, 1.0f, 1.0f   // 右腿
             };
             const float velocity = 0.0f;
 
