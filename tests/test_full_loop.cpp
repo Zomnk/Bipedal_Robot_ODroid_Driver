@@ -121,8 +121,8 @@ int main(int argc, char** argv) {
             // 索引顺序: [0-4]左腿 (Yaw, Roll, Pitch, Knee, Ankle)
             //          [5-9]右腿 (Yaw, Roll, Pitch, Knee, Ankle)
             const float kp_gains[NUM_JOINTS] = {
-                5.0f, 20.0f, 5.0f, 5.0f, 5.0f,  // 左腿
-                5.0f, 20.0f, 5.0f, 5.0f, 5.0f   // 右腿
+                10.0f, 20.0f, 10.0f, 10.0f, 10.0f,  // 左腿
+                10.0f, 20.0f, 10.0f, 10.0f, 10.0f   // 右腿
             };
             const float kd_gains[NUM_JOINTS] = {
                 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,  // 左腿
