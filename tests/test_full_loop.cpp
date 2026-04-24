@@ -30,6 +30,7 @@ using namespace odroid;
 
 // 全局运行标志
 volatile bool g_running = true;
+constexpr float JETSON_HANDSHAKE_MODE_FLAG = -888.0f;
 
 void signal_handler(int sig) {
     LOG_INFO("收到信号 %d, 准备退出...", sig);
@@ -108,6 +109,7 @@ int main(int argc, char** argv) {
 
     // 上次动作缓存（用于观测量）
     float last_action[NUM_JOINTS] = {0};
+    float current_joint_positions[NUM_JOINTS] = {0};
     
     while (g_running) {
         // ===== 1. 从Jetson接收Action (Response消息) =====
@@ -125,6 +127,7 @@ int main(int argc, char** argv) {
             // tau_exp[0] 存储当前正在标定的关节ID (0-9)
             bool calibration_mode = (action_from_jetson.dq_exp[0] == -999.0f);
             int calibrating_joint_id = calibration_mode ? static_cast<int>(action_from_jetson.tau_exp[0]) : -1;
+            bool handshake_mode = (action_from_jetson.dq_exp[0] == JETSON_HANDSHAKE_MODE_FLAG);
             
             // 控制参数：每个关节独立的Kp和Kd增益
             // 索引顺序: [0-4]左腿 (Yaw, Roll, Pitch, Knee, Ankle)
@@ -140,53 +143,53 @@ int main(int argc, char** argv) {
             const float velocity = 0.0f;
 
             // 使用独立的Kp/Kd值，标定模式时卸载对应关节扭矩
-            cmd.left_leg.yaw.position = action_from_jetson.q_exp[0];
+            cmd.left_leg.yaw.position = handshake_mode ? current_joint_positions[0] : action_from_jetson.q_exp[0];
             cmd.left_leg.yaw.velocity = velocity;
             cmd.left_leg.yaw.kp = (calibrating_joint_id == 0) ? 0.0f : kp_gains[0];
             cmd.left_leg.yaw.kd = (calibrating_joint_id == 0) ? 0.0f : kd_gains[0];
             
-            cmd.left_leg.roll.position = action_from_jetson.q_exp[1];
+            cmd.left_leg.roll.position = handshake_mode ? current_joint_positions[1] : action_from_jetson.q_exp[1];
             cmd.left_leg.roll.velocity = velocity;
             cmd.left_leg.roll.kp = (calibrating_joint_id == 1) ? 0.0f : kp_gains[1];
             cmd.left_leg.roll.kd = (calibrating_joint_id == 1) ? 0.0f : kd_gains[1];
             
-            cmd.left_leg.pitch.position = action_from_jetson.q_exp[2];
+            cmd.left_leg.pitch.position = handshake_mode ? current_joint_positions[2] : action_from_jetson.q_exp[2];
             cmd.left_leg.pitch.velocity = velocity;
             cmd.left_leg.pitch.kp = (calibrating_joint_id == 2) ? 0.0f : kp_gains[2];
             cmd.left_leg.pitch.kd = (calibrating_joint_id == 2) ? 0.0f : kd_gains[2];
             
-            cmd.left_leg.knee.position = action_from_jetson.q_exp[3];
+            cmd.left_leg.knee.position = handshake_mode ? current_joint_positions[3] : action_from_jetson.q_exp[3];
             cmd.left_leg.knee.velocity = velocity;
             cmd.left_leg.knee.kp = (calibrating_joint_id == 3) ? 0.0f : kp_gains[3];
             cmd.left_leg.knee.kd = (calibrating_joint_id == 3) ? 0.0f : kd_gains[3];
             
-            cmd.left_leg.ankle.position = action_from_jetson.q_exp[4];
+            cmd.left_leg.ankle.position = handshake_mode ? current_joint_positions[4] : action_from_jetson.q_exp[4];
             cmd.left_leg.ankle.velocity = velocity;
             cmd.left_leg.ankle.kp = (calibrating_joint_id == 4) ? 0.0f : kp_gains[4];
             cmd.left_leg.ankle.kd = (calibrating_joint_id == 4) ? 0.0f : kd_gains[4];
             
             // 右腿5个电机
-            cmd.right_leg.yaw.position = action_from_jetson.q_exp[5];
+            cmd.right_leg.yaw.position = handshake_mode ? current_joint_positions[5] : action_from_jetson.q_exp[5];
             cmd.right_leg.yaw.velocity = velocity;
             cmd.right_leg.yaw.kp = (calibrating_joint_id == 5) ? 0.0f : kp_gains[5];
             cmd.right_leg.yaw.kd = (calibrating_joint_id == 5) ? 0.0f : kd_gains[5];
             
-            cmd.right_leg.roll.position = action_from_jetson.q_exp[6];
+            cmd.right_leg.roll.position = handshake_mode ? current_joint_positions[6] : action_from_jetson.q_exp[6];
             cmd.right_leg.roll.velocity = velocity;
             cmd.right_leg.roll.kp = (calibrating_joint_id == 6) ? 0.0f : kp_gains[6];
             cmd.right_leg.roll.kd = (calibrating_joint_id == 6) ? 0.0f : kd_gains[6];
             
-            cmd.right_leg.pitch.position = action_from_jetson.q_exp[7];
+            cmd.right_leg.pitch.position = handshake_mode ? current_joint_positions[7] : action_from_jetson.q_exp[7];
             cmd.right_leg.pitch.velocity = velocity;
             cmd.right_leg.pitch.kp = (calibrating_joint_id == 7) ? 0.0f : kp_gains[7];
             cmd.right_leg.pitch.kd = (calibrating_joint_id == 7) ? 0.0f : kd_gains[7];
             
-            cmd.right_leg.knee.position = action_from_jetson.q_exp[8];
+            cmd.right_leg.knee.position = handshake_mode ? current_joint_positions[8] : action_from_jetson.q_exp[8];
             cmd.right_leg.knee.velocity = velocity;
             cmd.right_leg.knee.kp = (calibrating_joint_id == 8) ? 0.0f : kp_gains[8];
             cmd.right_leg.knee.kd = (calibrating_joint_id == 8) ? 0.0f : kd_gains[8];
             
-            cmd.right_leg.ankle.position = action_from_jetson.q_exp[9];
+            cmd.right_leg.ankle.position = handshake_mode ? current_joint_positions[9] : action_from_jetson.q_exp[9];
             cmd.right_leg.ankle.velocity = velocity;
             cmd.right_leg.ankle.kp = (calibrating_joint_id == 9) ? 0.0f : kp_gains[9];
             cmd.right_leg.ankle.kd = (calibrating_joint_id == 9) ? 0.0f : kd_gains[9];
@@ -241,6 +244,10 @@ int main(int argc, char** argv) {
             obs_to_jetson.q[7] = feedback.right_leg.pitch.position;
             obs_to_jetson.q[8] = feedback.right_leg.knee.position;
             obs_to_jetson.q[9] = feedback.right_leg.ankle.position;
+
+            for (int i = 0; i < NUM_JOINTS; ++i) {
+                current_joint_positions[i] = obs_to_jetson.q[i];
+            }
             
             // 7. 关节速度 (10个float)
             obs_to_jetson.dq[0] = feedback.left_leg.yaw.velocity;

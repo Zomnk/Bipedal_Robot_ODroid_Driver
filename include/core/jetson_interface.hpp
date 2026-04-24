@@ -48,6 +48,8 @@ struct JetsonInterfaceConfig {
     int comm_rate_hz = 500;    // 与Jetson通信频率
 };
 
+constexpr float JETSON_HANDSHAKE_MODE_FLAG = -888.0f;
+
 /**
  * @brief Jetson通信接口类
  */
@@ -112,6 +114,7 @@ public:
      */
     void send_observation(const RobotFeedback& feedback, const float* command = nullptr) {
         JetsonRequest request;
+        update_current_joint_positions(feedback);
         
         // 转换反馈数据为Jetson请求格式
         convert_feedback_to_request(feedback, request);
@@ -222,6 +225,20 @@ public:
     }
 
 private:
+    void update_current_joint_positions(const RobotFeedback& feedback) {
+        current_joint_positions_[L_YAW] = feedback.left_leg.yaw.position;
+        current_joint_positions_[L_ROLL] = feedback.left_leg.roll.position;
+        current_joint_positions_[L_PITCH] = feedback.left_leg.pitch.position;
+        current_joint_positions_[L_KNEE] = feedback.left_leg.knee.position;
+        current_joint_positions_[L_ANKLE] = feedback.left_leg.ankle.position;
+
+        current_joint_positions_[R_YAW] = feedback.right_leg.yaw.position;
+        current_joint_positions_[R_ROLL] = feedback.right_leg.roll.position;
+        current_joint_positions_[R_PITCH] = feedback.right_leg.pitch.position;
+        current_joint_positions_[R_KNEE] = feedback.right_leg.knee.position;
+        current_joint_positions_[R_ANKLE] = feedback.right_leg.ankle.position;
+    }
+
     /**
      * @brief 将RobotFeedback转换为JetsonRequest
      */
@@ -295,55 +312,68 @@ private:
     void convert_response_to_command(const JetsonResponse& response, RobotCommand& cmd) {
         float kp = config_.kp;
         float kd = config_.kd;
+        bool handshake_mode = (response.dq_exp[0] == JETSON_HANDSHAKE_MODE_FLAG);
+
+        const float left_yaw_pos   = handshake_mode ? current_joint_positions_[L_YAW]   : response.q_exp[L_YAW];
+        const float left_roll_pos  = handshake_mode ? current_joint_positions_[L_ROLL]  : response.q_exp[L_ROLL];
+        const float left_pitch_pos = handshake_mode ? current_joint_positions_[L_PITCH] : response.q_exp[L_PITCH];
+        const float left_knee_pos  = handshake_mode ? current_joint_positions_[L_KNEE]  : response.q_exp[L_KNEE];
+        const float left_ankle_pos = handshake_mode ? current_joint_positions_[L_ANKLE] : response.q_exp[L_ANKLE];
+
+        const float right_yaw_pos   = handshake_mode ? current_joint_positions_[R_YAW]   : response.q_exp[R_YAW];
+        const float right_roll_pos  = handshake_mode ? current_joint_positions_[R_ROLL]  : response.q_exp[R_ROLL];
+        const float right_pitch_pos = handshake_mode ? current_joint_positions_[R_PITCH] : response.q_exp[R_PITCH];
+        const float right_knee_pos  = handshake_mode ? current_joint_positions_[R_KNEE]  : response.q_exp[R_KNEE];
+        const float right_ankle_pos = handshake_mode ? current_joint_positions_[R_ANKLE] : response.q_exp[R_ANKLE];
         
         // 左腿
-        cmd.left_leg.yaw.position   = response.q_exp[L_YAW];
+        cmd.left_leg.yaw.position   = left_yaw_pos;
         cmd.left_leg.yaw.velocity   = 0.0f;
         cmd.left_leg.yaw.kp = kp;
         cmd.left_leg.yaw.kd = kd;
         
-        cmd.left_leg.roll.position  = response.q_exp[L_ROLL];
+        cmd.left_leg.roll.position  = left_roll_pos;
         cmd.left_leg.roll.velocity  = 0.0f;
         cmd.left_leg.roll.kp = kp;
         cmd.left_leg.roll.kd = kd;
         
-        cmd.left_leg.pitch.position = response.q_exp[L_PITCH];
+        cmd.left_leg.pitch.position = left_pitch_pos;
         cmd.left_leg.pitch.velocity = 0.0f;
         cmd.left_leg.pitch.kp = kp;
         cmd.left_leg.pitch.kd = kd;
         
-        cmd.left_leg.knee.position  = response.q_exp[L_KNEE];
+        cmd.left_leg.knee.position  = left_knee_pos;
         cmd.left_leg.knee.velocity  = 0.0f;
         cmd.left_leg.knee.kp = kp;
         cmd.left_leg.knee.kd = kd;
         
-        cmd.left_leg.ankle.position = response.q_exp[L_ANKLE];
+        cmd.left_leg.ankle.position = left_ankle_pos;
         cmd.left_leg.ankle.velocity = 0.0f;
         cmd.left_leg.ankle.kp = kp;
         cmd.left_leg.ankle.kd = kd;
         
         // 右腿
-        cmd.right_leg.yaw.position   = response.q_exp[R_YAW];
+        cmd.right_leg.yaw.position   = right_yaw_pos;
         cmd.right_leg.yaw.velocity   = 0.0f;
         cmd.right_leg.yaw.kp = kp;
         cmd.right_leg.yaw.kd = kd;
         
-        cmd.right_leg.roll.position  = response.q_exp[R_ROLL];
+        cmd.right_leg.roll.position  = right_roll_pos;
         cmd.right_leg.roll.velocity  = 0.0f;
         cmd.right_leg.roll.kp = kp;
         cmd.right_leg.roll.kd = kd;
         
-        cmd.right_leg.pitch.position = response.q_exp[R_PITCH];
+        cmd.right_leg.pitch.position = right_pitch_pos;
         cmd.right_leg.pitch.velocity = 0.0f;
         cmd.right_leg.pitch.kp = kp;
         cmd.right_leg.pitch.kd = kd;
         
-        cmd.right_leg.knee.position  = response.q_exp[R_KNEE];
+        cmd.right_leg.knee.position  = right_knee_pos;
         cmd.right_leg.knee.velocity  = 0.0f;
         cmd.right_leg.knee.kp = kp;
         cmd.right_leg.knee.kd = kd;
         
-        cmd.right_leg.ankle.position = response.q_exp[R_ANKLE];
+        cmd.right_leg.ankle.position = right_ankle_pos;
         cmd.right_leg.ankle.velocity = 0.0f;
         cmd.right_leg.ankle.kp = kp;
         cmd.right_leg.ankle.kd = kd;
@@ -359,6 +389,7 @@ private:
     std::atomic<bool> running_{false};
     
     float current_init_pos_[NUM_JOINTS] = {0};
+    float current_joint_positions_[NUM_JOINTS] = {0};
 };
 
 } // namespace odroid
