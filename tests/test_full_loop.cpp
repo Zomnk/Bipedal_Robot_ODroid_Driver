@@ -91,12 +91,21 @@ int main(int argc, char** argv) {
     LOG_INFO("UDP通信已初始化");
     LOG_INFO("开始完整数据流测试，按Ctrl+C退出");
     LOG_INFO("");
+
     
     uint64_t last_print_time = 0;
     uint64_t loop_count = 0;
     uint64_t action_recv_count = 0;
     uint64_t obs_send_count = 0;
-    
+
+    float kp_4340 = 20.0f;  // DM4340关节Roll的Kp增益
+    float kp_6006 = 10.0f;  // DM6006关节的Kp增益
+    float kp_8006 = 10.0f;   // DM8006关节Pitch的Kp增益
+
+    float kd_4340 = 1.0f;  // DM4340关节Roll的Kd增益
+    float kd_6006 = 1.0f;  // DM6006关节的Kd增益
+    float kd_8006 = 1.0f;   // DM8006关节Pitch的Kd增益
+
     // 上次动作缓存（用于观测量）
     float last_action[NUM_JOINTS] = {0};
     
@@ -121,12 +130,12 @@ int main(int argc, char** argv) {
             // 索引顺序: [0-4]左腿 (Yaw, Roll, Pitch, Knee, Ankle)
             //          [5-9]右腿 (Yaw, Roll, Pitch, Knee, Ankle)
             const float kp_gains[NUM_JOINTS] = {
-                10.0f, 20.0f, 10.0f, 10.0f, 10.0f,  // 左腿
-                10.0f, 20.0f, 10.0f, 10.0f, 10.0f   // 右腿
+                kp_6006, kp_4340, kp_8006, kp_6006, kp_6006,  // 左腿
+                kp_6006, kp_4340, kp_8006, kp_6006, kp_6006   // 右腿
             };
             const float kd_gains[NUM_JOINTS] = {
-                1.0f, 1.0f, 1.0f, 1.0f, 1.0f,  // 左腿
-                1.0f, 1.0f, 1.0f, 1.0f, 1.0f   // 右腿
+                kd_6006, kd_4340, kd_8006, kd_6006, kd_6006,  // 左腿
+                kd_6006, kd_4340, kd_8006, kd_6006, kd_6006   // 右腿
             };
             const float velocity = 0.0f;
 
